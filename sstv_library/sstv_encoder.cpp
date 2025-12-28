@@ -12,6 +12,7 @@
 //
 
 #include "sstv_encoder.h"
+#include <Arduino.h>
 
 #include <cmath>
 
@@ -500,9 +501,20 @@ void c_sstv_encoder :: generate_bw(e_sstv_tx_mode mode)
 }
 
 
-void c_sstv_encoder :: generate_sstv(e_sstv_tx_mode mode)
+void c_sstv_encoder :: generate_sstv(e_sstv_tx_mode mode, bool intro)
 {
   m_abort = false;
+  if (intro) {
+	generate_tone(1900, 100 << 16);
+	generate_tone(1500, 100 << 16);
+	generate_tone(1900, 100 << 16);
+	generate_tone(1500, 100 << 16);
+	generate_tone(2300, 100 << 16);
+	generate_tone(1500, 100 << 16);
+	generate_tone(2300, 100 << 16);
+	generate_tone(1500, 100 << 16);
+	generate_tone(1900, 200 << 16);
+  }
   generate_tone(1900, 300 << 16);
   generate_tone(1200, 10 << 16);
   generate_tone(1900, 300 << 16);

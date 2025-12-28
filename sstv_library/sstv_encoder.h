@@ -82,7 +82,7 @@ class c_sstv_encoder
 
   public:
   c_sstv_encoder(double fs_Hz);
-  void generate_sstv(e_sstv_tx_mode);
+  void generate_sstv(e_sstv_tx_mode, bool intro);
   void abort();
 };
 

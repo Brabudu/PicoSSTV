@@ -50,6 +50,7 @@
 #include "frame_buffer.h"
 #include "button.h"
 #include "bmp_lib.h"
+#include "XPT2046_Bitbang.h"
 
 #include <SPI.h>
 #include <SDFS.h>
@@ -94,6 +95,13 @@ const char* password = "Miagolina25!";
 #define SDCARD_MOSI 7
 #define SDCARD_CS   5
 #define SDCARD_SCK  6
+
+// TOUCH CONTROLLER
+
+#define T_MOSI_PIN 19
+#define T_MISO_PIN 16
+#define T_CLK_PIN  18
+#define T_CS_PIN   17
 
 //!!Note, can be quite a bit of variation between TFT displays
 //if the display doesn't look right it can be fixed by changing these settings!!
@@ -144,9 +152,12 @@ void create_thumbnail(const char* filename, e_mode mode);
 e_sstv_tx_mode convert_mode(e_mode rx_mode);
 
 ILI934X *display;
+
 #define DISPLAY_WIDTH 320
 #define DISPLAY_HEIGHT 240
 #define STATUS_BAR_HEIGHT 20
+
+XPT2046_Bitbang touchscreen(T_MOSI_PIN, T_MISO_PIN, T_CLK_PIN, T_CS_PIN);
 
 button button_up(26); //17
 button button_down(20); 
@@ -383,7 +394,7 @@ class c_sstv_encoder_pwm : public c_sstv_encoder
   {
     uint16_t scaled_sample = ((sample+32767)>>5);// + 1024;
     audio_buffer[ping_pong][audio_buffer_index++] = scaled_sample;
-    if(button_left.is_pressed()) abort();
+   
     if(audio_buffer_index == audio_buffer_length)
     {
       audio_output.output_samples(audio_buffer[ping_pong], audio_buffer_length);
@@ -391,6 +402,7 @@ class c_sstv_encoder_pwm : public c_sstv_encoder
       audio_buffer_index = 0;
       sample_max = scaled_sample;
       sample_min = scaled_sample;
+      if (button_left.is_pressed() || get_touch_button()==1) abort();
     }
     else
     {
@@ -478,6 +490,7 @@ class c_slideshow
   {
     if(num_bitmaps == 0) return;
     delay(50);
+    uint8_t touch_button = get_touch_button();
     bool redraw = false;
     static const uint16_t timeouts[] = {0, 1, 2, 5, 10, 30, 60, 60*2, 60*5};
     uint16_t timeout_milliseconds = 1000 * timeouts[settings.slideshow_timeout];
@@ -488,7 +501,11 @@ class c_slideshow
       else bitmap_index++;
       redraw = true;
     }
-    if(button_right.is_pressed()) {
+    if(touch_button == 1 ) {
+      view_mode = rx_mode;
+      return;
+    }
+    if(button_right.is_pressed() || touch_button == 2 ) {
       
       get_bitmap_index(root, bitmap_index);
       filename = root.fileName();
@@ -502,12 +519,12 @@ class c_slideshow
       if(num_bitmaps == 0) return;
       redraw = true;
     }
-    if(button_up.is_pressed()) {
+    if(button_up.is_pressed() || touch_button == 4 ) {
       if(bitmap_index == num_bitmaps-1) bitmap_index = 0;
       else bitmap_index++;
       redraw = true;
     }
-    if(button_down.is_pressed()) {
+    if(button_down.is_pressed() || touch_button == 3 ) {
       if(bitmap_index == 0) bitmap_index = num_bitmaps-1;
       else bitmap_index--;
       redraw = true;
@@ -537,6 +554,8 @@ void setup() {
   initialise_sdcard();
   VFS.root(SDFS);
 
+  touchscreen.begin();
+  
   load();
 
 #ifdef WIFI
@@ -545,6 +564,10 @@ void setup() {
 }
 
 void loop() {
+  static uint8_t counter=0;
+
+  static uint8_t touch_button=0;
+
   c_sstv_decoder_fileio sstv_decoder(15000);
   sstv_decoder.start();
   sstv_decoder.open("temp");
@@ -588,19 +611,21 @@ void loop() {
     }
     if(image_in_progress) {
       view_mode = rx_mode;
-      if (button_right.is_pressed()) {
+      if (button_right.is_pressed() || touch_button == 2 ) {
           sstv_decoder.stop();
+          touch_button=0;
           return;
       }
     } else {
-      if(button_left.is_pressed()) {
+      if(button_left.is_pressed() || touch_button == 1 ) {
         launch_menu();
         if(view_mode == slideshow_mode) slideshow.launch_slideshow();
         if(view_mode == rx_mode) {
           draw_blank_screen();
+          touch_button=0;
           draw = true;
         }
-      } else if (button_right.is_pressed() && (view_mode != slideshow_mode)) {    
+      } else if (( button_right.is_pressed() || touch_button == 2 ) && (view_mode != slideshow_mode)) {    
        
         text_entry(rxcallsign_text, 10);
         rst_entry(rst_text);
@@ -617,6 +642,8 @@ void loop() {
     if(view_mode == slideshow_mode) {
       
       slideshow.update_slideshow();
+      counter=255;
+
     } else if(view_mode == rx_mode && draw) {
       
       draw_button_bar("Menu", "Reply", "", "");
@@ -624,6 +651,15 @@ void loop() {
       display->fillRect(DISPLAY_WIDTH/2, DISPLAY_HEIGHT-STATUS_BAR_HEIGHT-1, STATUS_BAR_HEIGHT, DISPLAY_WIDTH/2, COLOUR_BLACK);
       draw = false;
     }
+
+    counter++;
+
+    if (counter==0) {
+      touch_button=get_touch_button();
+    } else {
+      touch_button=0;
+    }
+    
   #ifdef WIFI    
     if ((WiFi.status() == WL_CONNECTED)&&(!connected)) {
       server.begin();
@@ -636,6 +672,24 @@ void loop() {
   
 }
 
+uint8_t get_touch_button() {
+  static uint8_t last_touch=0;
+
+      TouchPoint touch = touchscreen.getTouch();
+
+      if (touch.zRaw > 600) {
+        uint8_t pos=touch.x/80;   //320 / 4
+        if (touch.y>200) {
+          if (last_touch!=pos+1) {
+              last_touch=pos+1;
+              delay(100);
+              return pos+1;
+          }
+        } 
+      } 
+      last_touch=0;
+      return 0;
+}
 void draw_splash_screen()
 {
   display->writeImage(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, splash);
@@ -770,7 +824,7 @@ void transmit_image(const char* filename) {
   c_sstv_encoder_pwm sstv_encoder(sample_rate_Hz);
   sstv_encoder.open(filename);
   digitalWrite(LED_BUILTIN, 1);
-  sstv_encoder.generate_sstv((e_sstv_tx_mode)settings.transmit_mode);
+  sstv_encoder.generate_sstv((e_sstv_tx_mode)settings.transmit_mode, true);
   digitalWrite(LED_BUILTIN, 0);
   sstv_encoder.close();
   display->clear(COLOUR_NAVY);
@@ -856,14 +910,18 @@ void tx_file_browser() {
   if(num_bitmaps == 0) return;
   uint16_t bitmap_index = 0;
   String filename;
-  
+  uint8_t touch_button=0;
+
   while(1) {
-    if(button_up.is_pressed()) {
+
+    touch_button=get_touch_button();
+
+    if(button_up.is_pressed() || touch_button == 4 ) {
       if(bitmap_index == num_bitmaps-1) bitmap_index = 0;
       else bitmap_index++;
       redraw = true;
     }
-    if(button_down.is_pressed()) {
+    if(button_down.is_pressed() || touch_button == 3 ) {
       if(bitmap_index == 0) bitmap_index = num_bitmaps-1;
       else bitmap_index--;
       redraw = true;
@@ -880,12 +938,12 @@ void tx_file_browser() {
       draw_button_bar("Transmit", "Cancel", "Last", "Next");
       redraw = false;
     }
-    if(button_left.is_pressed()) {
+    if(button_left.is_pressed() || touch_button == 1 ) {
       draw_button_bar("Cancel", "", "", "");
       transmit_image(filename.c_str());
       return;
     }
-    if(button_right.is_pressed()) {
+    if(button_right.is_pressed() || touch_button == 2 ) {
       draw_blank_screen();
       return;
     }
@@ -1074,6 +1132,8 @@ bool menu(const char* title, uint8_t &selection, const char * const menu_items[]
   uint8_t offset = 0;
   uint8_t menu_item = selection;
   bool draw = true;
+  
+  uint8_t touch_button=0;
 
   if(menu_item > offset+num_items_on_screen-1) {
     offset = menu_item - num_items_on_screen;
@@ -1087,15 +1147,17 @@ bool menu(const char* title, uint8_t &selection, const char * const menu_items[]
   draw_button_bar("OK", "Cancel", "Up", "Down");
   
   while(1) {
+   
+    touch_button=get_touch_button();
     
     #ifdef WIFI
     if (settings.wifi) poll_wifi();
     #endif
 
-    if(button_down.is_pressed() && menu_item > 0){menu_item--; draw = true;} 
-    if(button_up.is_pressed() && menu_item < num_menu_items-1){menu_item++; draw = true;}
-    if(button_left.is_pressed()){selection = menu_item; return true;} //ok
-    if(button_right.is_pressed()) return false; //cancel
+    if((button_down.is_pressed() || touch_button == 3 ) && menu_item > 0){menu_item--; draw = true;} 
+    if((button_up.is_pressed() || touch_button == 4 ) && menu_item < num_menu_items-1){menu_item++; draw = true;}
+    if((button_left.is_pressed() || touch_button == 1 )){selection = menu_item; return true;} //ok
+    if((button_right.is_pressed() || touch_button == 2 )) return false; //cancel
     if(menu_item < offset) {display->fillRect(0, 20, 200, 320, COLOUR_BLACK); offset--;} 
     if(menu_item > offset+num_items_on_screen-1) {display->fillRect(0, 20, 200, 320, COLOUR_BLACK); offset++;}
 
@@ -1112,6 +1174,7 @@ bool menu(const char* title, uint8_t &selection, const char * const menu_items[]
       }
       draw = false;
     }
+   
   }
 }
 

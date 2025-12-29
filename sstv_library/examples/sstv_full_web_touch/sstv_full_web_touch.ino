@@ -32,7 +32,7 @@
 //
 // Put your pictures (24 bit bmp) in the tx folder
 // Configure your callsign in the configuration section above
-// Use "reply" for replying to a cq call, then insert the receiver callsign and the rst. Select the picture and send
+// Use "reply" for replying to a cq call, then insert the receiver callsign and the rsv. Select the picture and send
 // Use "transmit" in the menu section for making a cq call
 
 #include "hardware/spi.h"
@@ -180,7 +180,7 @@ c_frame_buffer overlay(overlay_buffer, overlay_width, overlay_height);
 uint16_t scaled_image[214 * 160];
 
 char txcallsign_text[10] = CALLSIGN char rxcallsign_text[10];
-char rst_text[4];
+char rsv_text[4];
 
 struct s_settings {
   uint8_t slideshow_timeout;
@@ -617,8 +617,8 @@ void loop() {
       } else if ((button_right.is_pressed() || touch_button == 2) && (view_mode != slideshow_mode)) {
 
         text_entry(rxcallsign_text, 10);
-        rst_entry(rst_text);
-        rst_text[3] = 0;
+        rsv_entry(rsv_text);
+        rsv_text[3] = 0;
         overlay.clear(0);
         overlay.draw_image(20, 130, 106, 80, scaled_image);
         overlay.draw_rect(19, 129, 108, 82, COLOUR_WHITE);
@@ -902,7 +902,7 @@ void tx_file_browser() {
       get_bitmap_index(root, bitmap_index);
       filename = "/tx/" + root.fileName();
 
-      draw_overlay(txcallsign_text, rxcallsign_text, rst_text);
+      draw_overlay(txcallsign_text, rxcallsign_text, rsv_text);
       set_overlay(settings.overlay_text);
       display_image(filename.c_str(), settings.overlay);
       //draw_banner(filename.c_str(), settings.overlay?30:0);
@@ -1001,7 +1001,7 @@ void launch_menu() {
   } else if (menu_selection == 1) {
     overlay.clear(0);
     rxcallsign_text[0] = 0;
-    rst_text[0] = 0;
+    rsv_text[0] = 0;
     tx_file_browser();
     return;
   } else if (menu_selection == 2) {
@@ -1248,10 +1248,10 @@ void text_entry(char string[], uint8_t n) {
 
   display->clear(COLOUR_BLACK);
   if (!ins_mode) {
-    t_keyboard.make_kb(Mobile_KB);
+    t_keyboard.make_kb();
     display->drawString(70, 220, font_16x12, "Insert callsign", COLOUR_YELLOW, COLOUR_BLACK);
   }
-  
+
   while (1) {
     char entry;
     if (ins_mode) {
@@ -1273,7 +1273,7 @@ void text_entry(char string[], uint8_t n) {
     }
     if (entry == '<') {
       cursor--;
-      if (!ins_mode) string[cursor]=0;
+      if (!ins_mode) string[cursor] = 0;
     } else if (entry == '>') {
       cursor++;
     } else if (entry == '#') {
@@ -1291,32 +1291,54 @@ void text_entry(char string[], uint8_t n) {
   }
 }
 
-void rst_entry(char string[]) {
+void rsv_entry(char string[]) {
   uint8_t cursor = 0;
   uint8_t n = 3;
+
   display->clear(COLOUR_BLACK);
-  display->drawString((DISPLAY_WIDTH - (18 * 12)) / 2, 90, font_16x12, "Select RST (or 73)", COLOUR_YELLOW, COLOUR_BLACK);
-  draw_button_bar("<", ">", "+", "-");
+ 
+  if (ins_mode) {
+    draw_button_bar("<", ">", "+", "-");
+    display->drawString((DISPLAY_WIDTH - (18 * 12)) / 2, 90, font_16x12, "Select RSV (or 73)", COLOUR_YELLOW, COLOUR_BLACK);
+    while (1) {
 
-  while (1) {
+      display->drawRect((DISPLAY_WIDTH - (n * 12)) / 2, 120, 16, n * 12, COLOUR_NAVY);
+      display->drawString((DISPLAY_WIDTH - (n * 12)) / 2, 120, font_16x12, string, COLOUR_WHITE, COLOUR_NAVY);
+      display->drawRect((DISPLAY_WIDTH - (n * 12)) / 2 + cursor * 12, 120, 16, 12, COLOUR_RED);
 
-    display->drawRect((DISPLAY_WIDTH - (n * 12)) / 2, 120, 16, n * 12, COLOUR_NAVY);
-    display->drawString((DISPLAY_WIDTH - (n * 12)) / 2, 120, font_16x12, string, COLOUR_WHITE, COLOUR_NAVY);
-    display->drawRect((DISPLAY_WIDTH - (n * 12)) / 2 + cursor * 12, 120, 16, 12, COLOUR_RED);
+      if (button_down.is_pressed()) string[cursor]++;
+      if (button_up.is_pressed()) string[cursor]--;
+      if (button_left.is_pressed()) cursor--;
+      if (button_right.is_pressed()) cursor++;
 
-    if (button_down.is_pressed()) string[cursor]++;
-    if (button_up.is_pressed()) string[cursor]--;
-    if (button_left.is_pressed()) cursor--;
-    if (button_right.is_pressed()) cursor++;
+      if (cursor < 0) cursor = 0;
+      if (string[cursor] < ' ') string[cursor] = ' ';
+      else if (string[cursor] == '/') string[cursor] = ' ';
+      else if (string[cursor] == '!') string[cursor] = '0';
+      else if (string[cursor] > '9') string[cursor] = '9';
+      if (cursor == n) return;
+      cursor %= n;
+      delay(10);
+    }
+  } else {
+    char value;
 
-    if (cursor < 0) cursor = 0;
-    if (string[cursor] < ' ') string[cursor] = ' ';
-    else if (string[cursor] == '/') string[cursor] = ' ';
-    else if (string[cursor] == '!') string[cursor] = '0';
-    else if (string[cursor] > '9') string[cursor] = '9';
-    if (cursor == n) return;
-    cursor %= n;
-    delay(10);
+    const char* rsv[] = {
+    "595",
+    "575",
+    "553",
+    "475",
+    "473",
+    "453",
+    "73 "
+  };
+    display->drawString(70, 220, font_16x12, "Insert RSV or 73", COLOUR_YELLOW, COLOUR_BLACK);
+
+    t_keyboard.make_rsv_kb(rsv,7);
+    do {
+        value = t_keyboard.get_key_press();
+      } while (value == '-');
+      strcpy(string, rsv[(int)value]);
   }
 }
 

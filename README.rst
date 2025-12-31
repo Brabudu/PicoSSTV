@@ -78,6 +78,13 @@ sstv_full
 Receive and transmit functionality, SD card storage and full menu driven UI.
 
 .. image:: images/full_circuit.png
+
+sstv_full_web_touch
+'''''''''''''''''''
+
+Receive and transmit functionality, wifi connection and touch display, SD card storage and full menu driven UI.
+
+.. image:: images/touch.jpg
   
 
 Documentation
@@ -91,17 +98,10 @@ For technical details, refer to the technical documentation `part 1 <https://101
 A 3D printed enclosure can be found `here <https://github.com/dawsonjon/PicoSSTV/tree/main/enclosure>`__, including stl files and FreeCAD design files.
 
 
-Other Builds
-------------
-
-.. image:: https://github.com/Brabudu/WioTerminalSSTV/raw/main/img/sstv.jpg
-
-
-Check out the `port <https://github.com/Brabudu/WioTerminalSSTV>`__ to Wio Terminal by Franciscu Capuzzi "Brabudu" IS0JSV.
 
 Credits
 -------
 
-Many thanks to Franciscu Capuzzi IS0JSV for implementing additional modes and the waterfall feature.
+Many thanks to Antonino Russo for testing and feedback.
 This project uses the ILI934X display driver by Darren Horrocks.
 

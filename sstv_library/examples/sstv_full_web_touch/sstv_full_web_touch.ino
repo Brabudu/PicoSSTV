@@ -99,6 +99,8 @@ const char* password = "Miagolina25!";
 
 // TOUCH CONTROLLER
 
+bool touch_mode = true;
+
 #define T_MOSI_PIN 19
 #define T_MISO_PIN 16
 #define T_CLK_PIN 18
@@ -676,6 +678,29 @@ uint8_t get_touch_button() {
   last_touch = 0;
   return 0;
 }
+
+uint8_t get_touch_row() {
+  static uint8_t last_touch = 0;
+
+  static const uint8_t margin_y = 32;
+
+  TouchPoint touch = touchscreen.getTouch();
+
+  if (touch.zRaw > 600) {
+    uint8_t row = (touch.y - margin_y) / 25;
+    if (touch.x > 10 && touch.x < 160 && row < 7) {
+      if (last_touch != row + 1) {
+        last_touch = row + 1;
+        delay(100);
+
+        return row + 1;
+      }
+    }
+  }
+  last_touch = 0;
+  return 0;
+}
+
 void draw_splash_screen() {
   display->writeImage(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, splash);
   sleep_ms(1000);
@@ -1096,7 +1121,7 @@ void get_timeout_seconds(const char* title, uint8_t& menu_selection) {
 void get_transmit_mode(uint8_t& menu_selection) {
 
 
-  menu("Transmit Mode", menu_selection, tx_modes, sizeof(tx_modes));
+  menu("Transmit Mode", menu_selection, tx_modes, 16);
 }
 
 bool menu(const char* title, uint8_t& selection, const char* const menu_items[], uint8_t num_selections) {
@@ -1108,45 +1133,96 @@ bool menu(const char* title, uint8_t& selection, const char* const menu_items[],
 
   uint8_t touch_button = 0;
 
-  if (menu_item > offset + num_items_on_screen - 1) {
-    offset = menu_item - num_items_on_screen;
-  }
-
   display->fillRect(0, 0, DISPLAY_HEIGHT, DISPLAY_WIDTH, COLOUR_BLACK);
   display->fillRoundedRect(20, 0, 20, DISPLAY_WIDTH - 40, 5, COLOUR_BLUE);
   display->drawRoundedRect(20, 0, 20, DISPLAY_WIDTH - 40, 5, COLOUR_WHITE);
   uint16_t width = strlen(title) * 12;
   display->drawString((DISPLAY_WIDTH - width) / 2, 2, font_16x12, title, COLOUR_WHITE, COLOUR_BLUE);
-  draw_button_bar("OK", "Cancel", "Up", "Down");
+
+  if (!touch_mode) {
+    if (menu_item > offset + num_items_on_screen - 1) {
+      offset = menu_item - num_items_on_screen;
+    }
+    draw_button_bar("OK", "Cancel", "Up", "Down");
+  } else {
+    if (num_menu_items <= num_items_on_screen) {
+      draw_button_bar("", "Cancel", "", "");
+    } else {
+      if (offset < num_items_on_screen) {
+        draw_button_bar("", "Cancel", "", "Next");
+      }
+    }
+  }
+
 
   while (1) {
-
-    touch_button = get_touch_button();
 
 #ifdef WIFI
     if (settings.wifi) poll_wifi();
 #endif
 
-    if ((button_down.is_pressed() || touch_button == 3) && menu_item > 0) {
-      menu_item--;
-      draw = true;
-    }
-    if ((button_up.is_pressed() || touch_button == 4) && menu_item < num_menu_items - 1) {
-      menu_item++;
-      draw = true;
-    }
-    if ((button_left.is_pressed() || touch_button == 1)) {
-      selection = menu_item;
-      return true;
-    }                                                                    //ok
-    if ((button_right.is_pressed() || touch_button == 2)) return false;  //cancel
-    if (menu_item < offset) {
-      display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
-      offset--;
-    }
-    if (menu_item > offset + num_items_on_screen - 1) {
-      display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
-      offset++;
+    if (touch_mode) {
+
+      touch_button = get_touch_button();
+
+      if ((button_up.is_pressed() || touch_button == 4) && (num_menu_items - offset > num_items_on_screen)) {
+        offset += num_items_on_screen;
+        if (num_menu_items - offset > num_items_on_screen) {
+          draw_button_bar("", "Cancel", "Prev", "Next");
+        } else {
+          draw_button_bar("", "Cancel", "Prev", "");
+        }
+
+        display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
+        draw = true;
+      }
+      if ((button_down.is_pressed() || touch_button == 3) && offset >= num_items_on_screen) {
+        offset -= num_items_on_screen;
+
+        if (offset > 0) {
+          draw_button_bar("", "Cancel", "Prev", "Next");
+        } else {
+          draw_button_bar("", "Cancel", "", "Next");
+        }
+
+        display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
+        draw = true;
+      }
+
+      if ((button_right.is_pressed() || touch_button == 2)) return false;  //cancel
+
+      selection = get_touch_row();
+
+      if (selection > 0) {
+        selection = selection + offset - 1;
+        delay(200);
+        return true;
+      }
+
+    } else {
+
+      if (button_down.is_pressed() && menu_item > 0) {
+        menu_item--;
+        draw = true;
+      }
+      if (button_up.is_pressed() && menu_item < num_menu_items - 1) {
+        menu_item++;
+        draw = true;
+      }
+      if (button_left.is_pressed()) {
+        selection = menu_item;
+        return true;
+      }
+      if (button_right.is_pressed()) return false;  //cancel
+
+      if (menu_item < offset) {
+        display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
+        offset--;
+      }
+      if (menu_item > offset + num_items_on_screen - 1) {
+        display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
+        offset++;
+      }
     }
 
     if (draw) {
@@ -1155,8 +1231,8 @@ bool menu(const char* title, uint8_t& selection, const char* const menu_items[],
         const uint8_t menu_item_index = idx + offset;
         if (menu_item_index < num_selections) {
           const bool active = menu_item == menu_item_index;
-          if (active) display->fillCircle(10, 40 + ((idx)*25), 5, COLOUR_BLUE);
-          display->drawString(40, 32 + ((idx)*25), font_16x12, menu_items[menu_item_index], active ? COLOUR_BLUE : COLOUR_GREY, COLOUR_BLACK);
+          if (active && !touch_mode) display->fillCircle(10, 40 + ((idx)*25), 5, COLOUR_BLUE);
+          display->drawString(40, 32 + ((idx)*25), font_16x12, menu_items[menu_item_index], active && !touch_mode ? COLOUR_BLUE : COLOUR_GREY, COLOUR_BLACK);
         }
       }
       draw = false;
@@ -1241,20 +1317,18 @@ uint8_t get_char2(uint8_t sel0, uint8_t sel1) {
   }
 }
 
-bool ins_mode = false;
-
 void text_entry(char string[], uint8_t n) {
   uint8_t cursor = 0;
 
   display->clear(COLOUR_BLACK);
-  if (!ins_mode) {
+  if (touch_mode) {
     t_keyboard.make_kb();
     display->drawString(70, 220, font_16x12, "Insert callsign", COLOUR_YELLOW, COLOUR_BLACK);
   }
 
   while (1) {
     char entry;
-    if (ins_mode) {
+    if (!touch_mode) {
       display->clear(COLOUR_BLACK);
       display->drawRect((DISPLAY_WIDTH - (n * 12)) / 2, 20, 16, n * 12, COLOUR_NAVY);
       display->drawString((DISPLAY_WIDTH - (n * 12)) / 2, 20, font_16x12, string, COLOUR_WHITE, COLOUR_NAVY);
@@ -1273,7 +1347,7 @@ void text_entry(char string[], uint8_t n) {
     }
     if (entry == '<') {
       cursor--;
-      if (!ins_mode) string[cursor] = 0;
+      if (touch_mode) string[cursor] = 0;
     } else if (entry == '>') {
       cursor++;
     } else if (entry == '#') {
@@ -1296,8 +1370,8 @@ void rsv_entry(char string[]) {
   uint8_t n = 3;
 
   display->clear(COLOUR_BLACK);
- 
-  if (ins_mode) {
+
+  if (!touch_mode) {
     draw_button_bar("<", ">", "+", "-");
     display->drawString((DISPLAY_WIDTH - (18 * 12)) / 2, 90, font_16x12, "Select RSV (or 73)", COLOUR_YELLOW, COLOUR_BLACK);
     while (1) {
@@ -1324,21 +1398,21 @@ void rsv_entry(char string[]) {
     char value;
 
     const char* rsv[] = {
-    "595",
-    "575",
-    "553",
-    "475",
-    "473",
-    "453",
-    "73 "
-  };
+      "595",
+      "575",
+      "553",
+      "475",
+      "473",
+      "453",
+      "73 "
+    };
     display->drawString(70, 220, font_16x12, "Insert RSV or 73", COLOUR_YELLOW, COLOUR_BLACK);
 
-    t_keyboard.make_rsv_kb(rsv,7);
+    t_keyboard.make_rsv_kb(rsv, 7);
     do {
-        value = t_keyboard.get_key_press();
-      } while (value == '-');
-      strcpy(string, rsv[(int)value]);
+      value = t_keyboard.get_key_press();
+    } while (value == '-');
+    strcpy(string, rsv[(int)value]);
   }
 }
 

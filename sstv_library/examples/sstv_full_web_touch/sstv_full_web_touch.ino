@@ -99,7 +99,6 @@ const char* password = "Miagolina25!";
 
 // TOUCH CONTROLLER
 
-bool touch_mode = true;
 
 #define T_MOSI_PIN 19
 #define T_MISO_PIN 16
@@ -191,6 +190,7 @@ struct s_settings {
   uint8_t transmit_mode;
   uint8_t auto_slant_correction;
   uint8_t overlay;
+  uint8_t touch;
   uint8_t wifi;
   char overlay_text[25];
 };
@@ -202,7 +202,8 @@ s_settings settings = {
   1,  //martin m2
   1,  //auto slant correction on
   1,  // overlay on
-  0,  //wifi off
+  0,  //touch off
+  0,   //wifi off
   { 0 }
 };
 
@@ -1042,9 +1043,11 @@ void launch_menu() {
       "Slideshow Timeout",
       "Overlay",
       "Overlay Text",
+      "Touch mode",
       "Wifi"
+      
     };
-    if (menu("Settings", menu_selection, menu_selections, 8)) {
+    if (menu("Settings", menu_selection, menu_selections, 9)) {
       switch (menu_selection) {
         case 0:
           {  //Auto slant correction
@@ -1084,8 +1087,14 @@ void launch_menu() {
             text_entry(settings.overlay_text, 24);
           }
           break;
-#ifdef WIFI
         case 7:
+          {  //overlay
+            const char* const menu_selections[] = { "Off", "On" };
+            menu("Touch mode", settings.touch, menu_selections, 2);
+          }
+          break;
+#ifdef WIFI
+        case 8:
           {  //wifi
             const char* const menu_selections[] = { "Off", "On" };
             menu("Wifi", settings.wifi, menu_selections, 2);
@@ -1139,7 +1148,7 @@ bool menu(const char* title, uint8_t& selection, const char* const menu_items[],
   uint16_t width = strlen(title) * 12;
   display->drawString((DISPLAY_WIDTH - width) / 2, 2, font_16x12, title, COLOUR_WHITE, COLOUR_BLUE);
 
-  if (!touch_mode) {
+  if (!settings.touch) {
     if (menu_item > offset + num_items_on_screen - 1) {
       offset = menu_item - num_items_on_screen;
     }
@@ -1161,7 +1170,7 @@ bool menu(const char* title, uint8_t& selection, const char* const menu_items[],
     if (settings.wifi) poll_wifi();
 #endif
 
-    if (touch_mode) {
+    if (settings.touch) {
 
       touch_button = get_touch_button();
 
@@ -1231,8 +1240,8 @@ bool menu(const char* title, uint8_t& selection, const char* const menu_items[],
         const uint8_t menu_item_index = idx + offset;
         if (menu_item_index < num_selections) {
           const bool active = menu_item == menu_item_index;
-          if (active && !touch_mode) display->fillCircle(10, 40 + ((idx)*25), 5, COLOUR_BLUE);
-          display->drawString(40, 32 + ((idx)*25), font_16x12, menu_items[menu_item_index], active && !touch_mode ? COLOUR_BLUE : COLOUR_GREY, COLOUR_BLACK);
+          if (active && !settings.touch) display->fillCircle(10, 40 + ((idx)*25), 5, COLOUR_BLUE);
+          display->drawString(40, 32 + ((idx)*25), font_16x12, menu_items[menu_item_index], active && !settings.touch ? COLOUR_BLUE : COLOUR_GREY, COLOUR_BLACK);
         }
       }
       draw = false;
@@ -1321,14 +1330,14 @@ void text_entry(char string[], uint8_t n) {
   uint8_t cursor = 0;
 
   display->clear(COLOUR_BLACK);
-  if (touch_mode) {
+  if (settings.touch) {
     t_keyboard.make_kb();
     display->drawString(70, 220, font_16x12, "Insert callsign", COLOUR_YELLOW, COLOUR_BLACK);
   }
 
   while (1) {
     char entry;
-    if (!touch_mode) {
+    if (!settings.touch) {
       display->clear(COLOUR_BLACK);
       display->drawRect((DISPLAY_WIDTH - (n * 12)) / 2, 20, 16, n * 12, COLOUR_NAVY);
       display->drawString((DISPLAY_WIDTH - (n * 12)) / 2, 20, font_16x12, string, COLOUR_WHITE, COLOUR_NAVY);
@@ -1347,7 +1356,7 @@ void text_entry(char string[], uint8_t n) {
     }
     if (entry == '<') {
       cursor--;
-      if (touch_mode) string[cursor] = 0;
+      if (settings.touch) string[cursor] = 0;
     } else if (entry == '>') {
       cursor++;
     } else if (entry == '#') {
@@ -1371,7 +1380,7 @@ void rsv_entry(char string[]) {
 
   display->clear(COLOUR_BLACK);
 
-  if (!touch_mode) {
+  if (!settings.touch) {
     draw_button_bar("<", ">", "+", "-");
     display->drawString((DISPLAY_WIDTH - (18 * 12)) / 2, 90, font_16x12, "Select RSV (or 73)", COLOUR_YELLOW, COLOUR_BLACK);
     while (1) {
@@ -1416,7 +1425,7 @@ void rsv_entry(char string[]) {
   }
 }
 
-#define version 100
+#define version 101
 
 void save() {
   EEPROM.put(sizeof(settings), settings);

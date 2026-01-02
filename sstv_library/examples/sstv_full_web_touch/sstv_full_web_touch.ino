@@ -105,6 +105,12 @@ const char* password = "Miagolina25!";
 #define T_CLK_PIN 18
 #define T_CS_PIN 17
 
+// Change this for enabling-disabling touch mode at first startup
+// You can change it in settings->Touch mode
+
+#define touch_installed 1
+//#define touch_installed 0
+
 //!!Note, can be quite a bit of variation between TFT displays
 //if the display doesn't look right it can be fixed by changing these settings!!
 
@@ -202,7 +208,7 @@ s_settings settings = {
   1,  //martin m2
   1,  //auto slant correction on
   1,  // overlay on
-  0,  //touch off
+  touch_installed,  //touch off
   0,  //wifi off
   { 0 }
 };
@@ -1089,7 +1095,6 @@ void launch_menu() {
           {  //overlay
             const char* const menu_selections[] = { "Off", "On" };
             menu("Touch mode", settings.touch, menu_selections, 2);
-            Serial.println("exit");
           }
           break;
 #ifdef WIFI

@@ -203,7 +203,7 @@ s_settings settings = {
   1,  //auto slant correction on
   1,  // overlay on
   0,  //touch off
-  0,   //wifi off
+  0,  //wifi off
   { 0 }
 };
 
@@ -269,7 +269,7 @@ class c_sstv_decoder_fileio : public c_sstv_decoder {
     snprintf(buffer, 15, "%5s %ux%u", rx_modes_abbr[decode_mode], width, y + 1);
     draw_status_bar(buffer);
     //draw_banner(buffer);
-    Serial.println(buffer);
+    //Serial.println(buffer);
 
     progress = y / (float)height;
     last_mode = decode_mode;
@@ -305,7 +305,7 @@ class c_sstv_decoder_fileio : public c_sstv_decoder {
     }
     signal_strength = (signal_strength * 15 + mag) / 16;
     if (count > 200) {
-      //display->drawRect(scope_x-1, scope_y-12, 14, scope_width+3, COLOUR_DARKGREY);
+
       uint16_t waterfall[scope_width];
       for (int i = 0; i < scope_width; i++) {
         float scaled_dB = waterfall_amp * 20 * log10(spectrum[i]);
@@ -333,7 +333,6 @@ class c_sstv_decoder_fileio : public c_sstv_decoder {
     count++;
   }
 
-
   c_bmp_writer_stdio output_file;
   uint16_t bmp_row_number = 0;
 
@@ -346,7 +345,6 @@ public:
   e_mode getLastMode() {
     return last_mode;
   }
-
 
   void open(const char* bmp_file_name) {
     tft_row_number = 0;
@@ -1045,7 +1043,7 @@ void launch_menu() {
       "Overlay Text",
       "Touch mode",
       "Wifi"
-      
+
     };
     if (menu("Settings", menu_selection, menu_selections, 9)) {
       switch (menu_selection) {
@@ -1091,6 +1089,7 @@ void launch_menu() {
           {  //overlay
             const char* const menu_selections[] = { "Off", "On" };
             menu("Touch mode", settings.touch, menu_selections, 2);
+            Serial.println("exit");
           }
           break;
 #ifdef WIFI
@@ -1200,10 +1199,10 @@ bool menu(const char* title, uint8_t& selection, const char* const menu_items[],
 
       if ((button_right.is_pressed() || touch_button == 2)) return false;  //cancel
 
-      selection = get_touch_row();
+      menu_item = get_touch_row();
 
-      if (selection > 0) {
-        selection = selection + offset - 1;
+      if (menu_item > 0) {
+        selection = menu_item + offset - 1;
         delay(200);
         return true;
       }
@@ -1240,8 +1239,8 @@ bool menu(const char* title, uint8_t& selection, const char* const menu_items[],
         const uint8_t menu_item_index = idx + offset;
         if (menu_item_index < num_selections) {
           const bool active = menu_item == menu_item_index;
-          if (active && !settings.touch) display->fillCircle(10, 40 + ((idx)*25), 5, COLOUR_BLUE);
-          display->drawString(40, 32 + ((idx)*25), font_16x12, menu_items[menu_item_index], active && !settings.touch ? COLOUR_BLUE : COLOUR_GREY, COLOUR_BLACK);
+          if (active && (!settings.touch)) display->fillCircle(10, 40 + ((idx)*25), 5, COLOUR_BLUE);
+          display->drawString(40, 32 + ((idx)*25), font_16x12, menu_items[menu_item_index], active && (!settings.touch) ? COLOUR_BLUE : COLOUR_GREY, COLOUR_BLACK);
         }
       }
       draw = false;

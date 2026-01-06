@@ -198,18 +198,25 @@ struct s_settings {
   uint8_t overlay;
   uint8_t touch;
   uint8_t wifi;
+  uint8_t color1;
+  uint8_t color2;
+  uint8_t color3;
+
   char overlay_text[25];
 };
 
 s_settings settings = {
-  3,  //5 seconds
-  3,  //30 seconds
-  2,  // 50%
-  1,  //martin m2
-  1,  //auto slant correction on
-  1,  // overlay on
+  3,                //5 seconds
+  3,                //30 seconds
+  2,                // 50%
+  1,                //martin m2
+  1,                //auto slant correction on
+  1,                // overlay on
   touch_installed,  //touch off
-  0,  //wifi off
+  0,                //wifi off
+  8,                //orange
+  8,                //orange
+  2,                //red
   { 0 }
 };
 
@@ -289,7 +296,7 @@ class c_sstv_decoder_fileio : public c_sstv_decoder {
     const uint16_t scope_y = 234;
     const uint16_t scope_width = 150;
 
-    const uint8_t waterfall_amp = 4;
+    const uint8_t waterfall_amp = 5;
 
     if (view_mode != rx_mode) return;
 
@@ -693,7 +700,7 @@ uint8_t get_touch_row() {
 
   if (touch.zRaw > 600) {
     uint8_t row = (touch.y - margin_y) / 25;
-    if (touch.x > 10 && touch.x < 160 && row < 7) {
+    if (touch.x > 10 && touch.x < 300) {
       if (last_touch != row + 1) {
         last_touch = row + 1;
         delay(100);
@@ -914,9 +921,34 @@ void tx_file_browser() {
   String filename;
   uint8_t touch_button = 0;
 
+  uint8_t touch_row;
+
+
   while (1) {
 
-    touch_button = get_touch_button();
+    touch_row = get_touch_row();
+
+    if (touch_row == 8) {
+      touch_button = get_touch_button();  //Menu bar
+    } else {
+      touch_button = 0;
+    }
+
+    if (touch_row == 1 || touch_row == 2 || touch_row == 6 || touch_row == 7) {
+      t_keyboard.make_color_kb();
+      delay(500);
+      char color;
+      do {
+        delay(10);
+        color = t_keyboard.get_key_press();
+      } while (color == '-');
+      if (touch_row==1) settings.color1=color;
+      else if (touch_row ==2) settings.color2=color;
+      else settings.color3=color;
+      save();
+      redraw=true;
+    } 
+
 
     if (button_up.is_pressed() || touch_button == 4) {
       if (bitmap_index == num_bitmaps - 1) bitmap_index = 0;
@@ -1004,9 +1036,9 @@ void draw_outlined(uint16_t x, uint16_t y, String msg, uint16_t fg, uint16_t bg)
 
 void draw_overlay(String callsignSender, String callsignReceiver, String msg) {
   if (callsignReceiver == "") callsignReceiver = "CQ CQ";
-  draw_outlined(20, 60, callsignReceiver, COLOUR_ORANGE, COLOUR_WHITE);
-  draw_outlined(40, 110, msg, COLOUR_ORANGE, COLOUR_WHITE);
-  draw_outlined(140, 220, callsignSender, COLOUR_RED, COLOUR_WHITE);
+  draw_outlined(20, 60, callsignReceiver, palette[settings.color1], COLOUR_WHITE);
+  draw_outlined(40, 110, msg, palette[settings.color2], COLOUR_WHITE);
+  draw_outlined(300 - callsignSender.length() * 28, 220, callsignSender, palette[settings.color3], COLOUR_WHITE);
 }
 
 void launch_menu() {
@@ -1094,7 +1126,7 @@ void launch_menu() {
         case 7:
           {  //overlay
             const char* const menu_selections[] = { "Off", "On" };
-            menu("Touch mode", settings.touch, menu_selections, 2);
+            if (touch_installed) menu("Touch mode", settings.touch, menu_selections, 2);
           }
           break;
 #ifdef WIFI
@@ -1206,7 +1238,7 @@ bool menu(const char* title, uint8_t& selection, const char* const menu_items[],
 
       menu_item = get_touch_row();
 
-      if (menu_item > 0) {
+      if (menu_item > 0 && menu_item <= 7) {
         selection = menu_item + offset - 1;
         delay(200);
         return true;
@@ -1429,20 +1461,20 @@ void rsv_entry(char string[]) {
   }
 }
 
-#define version 101
+#define version 102
 
 void save() {
-  EEPROM.put(sizeof(settings), settings);
-  uint32_t scores_stored = 0;
+  EEPROM.put(2, settings);
+  uint16_t scores_stored = 0;
   EEPROM.get(0, scores_stored);
   if (scores_stored != version) EEPROM.put(0, version);
   EEPROM.commit();
 }
 
 void load() {
-  uint32_t scores_stored = 0;
+  uint16_t scores_stored = 0;
   EEPROM.get(0, scores_stored);
-  if (scores_stored == version) EEPROM.get(sizeof(settings), settings);
+  if (scores_stored == version) EEPROM.get(2, settings);
 }
 
 void create_thumbnail(const char* filename, e_mode mode) {

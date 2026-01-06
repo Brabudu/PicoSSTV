@@ -26,6 +26,12 @@ void touch_keyboard ::draw_kb_button_c(int x, int y, int w, int h, const char c)
   display->drawChar(x + 5, y + 5, font_16x12, c, COLOUR_ORANGE, COLOUR_BLUE);
 }
 
+void touch_keyboard ::draw_color_button(int x, int y, int w, int h, const uint16_t color) {
+  display->fillRoundedRect(x - 3, y + 3, h, w, 3, COLOUR_GREY);            //Button Shading
+  display->fillRoundedRect(x, y, h, w, 3, COLOUR_WHITE);                   // outter button color
+  display->fillRoundedRect(x + 1, y + 1, h - 1 * 2, w - 1 * 2, 3, color);  //inner button color
+}
+
 void touch_keyboard ::draw_kb_button(int x, int y, int w, int h, const char* c) {
   display->fillRoundedRect(x - 3, y + 3, h, w, 3, COLOUR_GREY);                  //Button Shading
   display->fillRoundedRect(x, y, h, w, 3, COLOUR_WHITE);                         // outter button color
@@ -48,7 +54,7 @@ void touch_keyboard ::make_kb() {
   draw_kb_button(15 + 110, MARGIN_TOP + (30 * 4), 70, 25, "Clear");
   draw_kb_button(15 + 190, MARGIN_TOP + (30 * 4), 80, 25, "Enter");
 
-  rsv_mode = false;
+  mode = mode_keys;
 }
 
 void touch_keyboard ::make_rsv_kb(const char* rsv[], int count) {
@@ -57,7 +63,7 @@ void touch_keyboard ::make_rsv_kb(const char* rsv[], int count) {
     draw_kb_button(60 + 70 * (i % 3), MARGIN_TOP + 35 * (i / 3), 50, 25, rsv[i]);
   }
 
-  rsv_mode = true;
+  mode = mode_rsv;
 }
 
 bool touch_button(int x, int y, int w, int h, int X, int Y) {
@@ -105,42 +111,66 @@ char touch_keyboard ::get_key_press() {
 
   //display->drawCircle(X,Y,3,COLOUR_WHITE); //For calibration purpose
 
-  if (!rsv_mode) {
-    //bs
-    if (touch_button(35, MARGIN_TOP + (30 * 4), 40, 25, X, Y)) {
-      return '<';
-    }
+  switch (mode) {
+    case mode_keys:
+      {
+        //bs
+        if (touch_button(35, MARGIN_TOP + (30 * 4), 40, 25, X, Y)) {
+          return '<';
+        }
 
-    if (touch_button(85, MARGIN_TOP + (30 * 4), 20, 25, X, Y)) {
-      return '_';
-    }
+        if (touch_button(85, MARGIN_TOP + (30 * 4), 20, 25, X, Y)) {
+          return '_';
+        }
 
-    //clear
-    if (touch_button(125, MARGIN_TOP + (30 * 4), 70, 25, X, Y)) {
-      return '!';
-    }
+        //clear
+        if (touch_button(125, MARGIN_TOP + (30 * 4), 70, 25, X, Y)) {
+          return '!';
+        }
 
-    if (touch_button(205, MARGIN_TOP + (30 * 4), 80, 25, X, Y)) {
-      return '#';
-    }
+        if (touch_button(205, MARGIN_TOP + (30 * 4), 80, 25, X, Y)) {
+          return '#';
+        }
 
-    for (int y = 0; y < 4; y++) {
-      ShiftRight = 15 * keyboard[y][0];
+        for (int y = 0; y < 4; y++) {
+          ShiftRight = 15 * keyboard[y][0];
 
-      for (int x = 2; x < 12; x++) {
-        if (x >= keyboard[y][1]) break;
+          for (int x = 2; x < 12; x++) {
+            if (x >= keyboard[y][1]) break;
 
-        if (touch_button(15 + (30 * (x - 2)) + ShiftRight, MARGIN_TOP + (30 * y), 20, 25, X, Y))  // this will draw the button on the screen by so many pixels
-        {
-          return keyboard[y][x];
-          break;
+            if (touch_button(15 + (30 * (x - 2)) + ShiftRight, MARGIN_TOP + (30 * y), 20, 25, X, Y))  // this will draw the button on the screen by so many pixels
+            {
+              return keyboard[y][x];
+              break;
+            }
+          }
         }
       }
-    }
-  } else {
-    for (int i=0;i<7;i++) {
-      if (touch_button(60 + 70 * (i % 3), MARGIN_TOP + 35 * (i / 3), 50, 25, X,Y)) return i;
-    }
+      break;
+    case mode_rsv:
+      {
+        for (int i = 0; i < 7; i++) {
+          if (touch_button(60 + 70 * (i % 3), MARGIN_TOP + 35 * (i / 3), 50, 25, X, Y)) return i;
+        }
+      }
+      break;
+    case mode_color:
+      {
+        for (int i = 0; i < 16; i++) {
+          if (touch_button(30 + 70 * (i % 4), MARGIN_TOP + 35 * (i / 4), 50, 25, X, Y)) return i;
+        }
+      }
+      break;
   }
   return '-';
+}
+
+void touch_keyboard ::make_color_kb() {
+  
+
+  for (int i = 0; i < 16; i++) {
+    draw_color_button(30 + 70 * (i % 4), MARGIN_TOP + 35 * (i / 4), 50, 25, palette[i]);
+  }
+
+  mode = mode_color;
 }

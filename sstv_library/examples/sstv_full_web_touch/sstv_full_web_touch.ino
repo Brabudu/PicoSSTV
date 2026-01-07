@@ -108,8 +108,11 @@ const char* password = "Miagolina25!";
 // Change this for enabling-disabling touch mode at first startup
 // You can change it in settings->Touch mode
 
-#define touch_installed 1
-//#define touch_installed 0
+#define touch_installed
+
+//Comment this if you want only touch
+
+#define buttons_installed
 
 //!!Note, can be quite a bit of variation between TFT displays
 //if the display doesn't look right it can be fixed by changing these settings!!
@@ -212,7 +215,11 @@ s_settings settings = {
   1,                //martin m2
   1,                //auto slant correction on
   1,                // overlay on
-  touch_installed,  //touch off
+  #ifdef touch_installed
+    1,
+  #else
+    0,
+  #endif
   0,                //wifi off
   8,                //orange
   8,                //orange
@@ -1126,7 +1133,11 @@ void launch_menu() {
         case 7:
           {  //overlay
             const char* const menu_selections[] = { "Off", "On" };
-            if (touch_installed) menu("Touch mode", settings.touch, menu_selections, 2);
+            #ifdef touch_installed
+            #ifdef buttons_installed
+              menu("Touch mode", settings.touch, menu_selections, 2);
+            #endif
+            #endif
           }
           break;
 #ifdef WIFI

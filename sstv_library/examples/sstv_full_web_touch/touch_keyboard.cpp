@@ -4,6 +4,7 @@
 #include "font_16x12.h"
 #include <Arduino.h>
 
+// Copyright (c) Francesco Capuzzi 2025
 // This is calibration data for the raw touch data to the screen coordinates
 
 #define IsWithin(x, a, b) ((x >= a) && (x <= b))

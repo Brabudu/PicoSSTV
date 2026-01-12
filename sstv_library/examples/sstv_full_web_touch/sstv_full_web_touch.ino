@@ -61,9 +61,10 @@
 #include <string>
 #include <algorithm>
 
+#include "main_menu.h"
 
 #if defined(PICO_RP2350)
-#define WIFI  //Comment for disabling wifi
+//#define WIFI  //Comment for disabling wifi
 #endif
 
 #ifdef WIFI
@@ -571,6 +572,10 @@ void setup() {
 #ifdef WIFI
   if (settings.wifi) connectToWiFi();
 #endif
+
+  lcd_menu(main_menu, display);
+
+  while(1) {}
 }
 
 void loop() {

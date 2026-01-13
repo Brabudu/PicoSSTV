@@ -573,9 +573,8 @@ void setup() {
   if (settings.wifi) connectToWiFi();
 #endif
 
-  lcd_menu(main_menu, display);
+  lcd_menu(&main_menu, display);
 
-  while(1) {}
 }
 
 void loop() {

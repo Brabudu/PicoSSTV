@@ -15,10 +15,6 @@ void XPT2046_Bitbang::begin() {
   digitalWrite(_clkPin, LOW);
 }
 
-void XPT2046_Bitbang::setCalibration(uint16_t xMin, uint16_t xMax, uint16_t yMin, uint16_t yMax) {
-  cal = TouchCalibration{ xMin, xMax, yMin, yMax };
-}
-
 void XPT2046_Bitbang::writeSPI(byte command) {
   for (int i = 7; i >= 0; i--) {
     digitalWrite(_mosiPin, command & (1 << i));

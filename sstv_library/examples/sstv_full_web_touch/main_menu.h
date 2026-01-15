@@ -41,7 +41,6 @@ bool im_save(menu_item m) {
   return true;
 }
 
-
 ///////////////////////////////
 
 menu_item ls_timeout_items[] = {
@@ -77,21 +76,21 @@ menu_list sl_timeout_menu = MENU_LIST(0, "Slideshow timeout", 9, NULL, sl_timeou
 
 /////////////////////////////////////////
 
-///////////////////////////////
-
 menu_item im_save_items[] = {
-  MENU_ITEM(0, "Never", false, &im_save, NULL),
-  MENU_ITEM(1, "1 second", false, &im_save, NULL),
-  MENU_ITEM(2, "2 seconds", false, &im_save, NULL),
+  MENU_ITEM(0, "90%", false, &im_save, NULL),
+  MENU_ITEM(1, "75%", false, &im_save, NULL),
+  MENU_ITEM(2, "50%", false, &im_save, NULL),
 };
 
 menu_list im_save_menu = MENU_LIST(0, "Min % to save", 3, NULL, im_save_items);
+
+/////////////////////////////////////////
 
 menu_item settings_items[] = {
   MENU_ITEM(0, "Auto slant", true, &autoslant, NULL),
   MENU_ITEM(1, "Lost sig. timeout", false, NULL, &ls_timeout_menu),
   MENU_ITEM(1, "Slideshow timeout", false, NULL, &sl_timeout_menu),
-  MENU_ITEM(2, "Min save %", false, NULL, NULL),
+  MENU_ITEM(2, "Min save %", false, NULL, &im_save_menu),
   MENU_ITEM(3, "Transmit mode", false, NULL, NULL)
 };
 

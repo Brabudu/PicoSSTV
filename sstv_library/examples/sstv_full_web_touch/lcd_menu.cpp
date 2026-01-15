@@ -57,7 +57,7 @@ lcd_menu ::lcd_menu(menu_list* root, ILI934X* disp) {
     if (redraw) {
       display->fillRect(0, 0, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT, DISPLAY_WIDTH, COLOUR_LIGHTGREY);
       uint16_t width = strlen(root->title) * 12;
-      display->drawString((DISPLAY_WIDTH - width) / 2, 3, font_16x12, root->title, COLOUR_RED, COLOUR_LIGHTGREY);
+      display->drawString((DISPLAY_WIDTH - width) / 2, 5, font_16x12, root->title, COLOUR_RED, COLOUR_LIGHTGREY);
 
       items = 0;
 
@@ -87,7 +87,7 @@ lcd_menu ::lcd_menu(menu_list* root, ILI934X* disp) {
     if (selection != 8) {
       menu_item actual = root->items[page * NUM_LINES + selection - 1];
       draw_menu_item(selection - 1, actual, true);
-      delay(200);
+      delay(300);
 
       if (actual.sub_menu != NULL) {
         root = actual.sub_menu;

@@ -14,6 +14,10 @@
 
 #define STATUS_BAR_HEIGHT 20
 
+#define BUTTON_WIDTH 60
+#define BUTTON_HEIGHT 14
+#define PADDING (DISPLAY_WIDTH - (4 * BUTTON_WIDTH)) / 5
+
 #define MARGIN_LEFT 40
 #define MARGIN_TOP 26
 #define HEIGHT 27
@@ -26,9 +30,22 @@
 extern Stream* s;
 extern XPT2046_Bitbang touchscreen;
 
+
+bar_item menu_bar_items[] = {
+  BAR_ITEM(0, "Exit", true),
+  BAR_ITEM(1, "", false),
+  BAR_ITEM(2, "Prev", false),
+  BAR_ITEM(3, "Next", false)
+};
+
+bar_menu menu_bar = { 4, menu_bar_items };
+
 lcd_menu ::lcd_menu(menu_list* root, ILI934X* disp) {
   delay(1000);
+
   display = disp;
+
+  touchscreen.setCalibration(100, 3900, 100, 3900);
 
   bool redraw = true;
   uint8_t items = 0;
@@ -38,21 +55,29 @@ lcd_menu ::lcd_menu(menu_list* root, ILI934X* disp) {
   while (!exit) {
 
     if (redraw) {
-      display->clear(COLOUR_LIGHTGREY);
+      display->fillRect(0, 0, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT, DISPLAY_WIDTH, COLOUR_LIGHTGREY);
       uint16_t width = strlen(root->title) * 12;
-      display->drawString((DISPLAY_WIDTH - width) / 2, 2, font_16x12, root->title, COLOUR_ORANGE, COLOUR_LIGHTGREY);
-      draw_button_bar("Exit", "", "", "");
+      display->drawString((DISPLAY_WIDTH - width) / 2, 3, font_16x12, root->title, COLOUR_RED, COLOUR_LIGHTGREY);
 
       items = 0;
 
-      for (uint8_t idx = 0; idx < root->num_items; idx++) {
+      for (uint8_t idx = page * NUM_LINES; idx < root->num_items; idx++) {
         if (root->items[idx].active) {
           draw_menu_item(items, root->items[idx], false);
           items++;
         }
-        if (items >= NUM_LINES) break;
+        if (items >= NUM_LINES) {
+          menu_bar.items[3].active = true;  //Next button
+          break;
+        } else {
+          menu_bar.items[3].active = false;
+        }
       }
+
+      menu_bar.items[2].active = (page > 0);  //Prev button
       redraw = false;
+
+      draw_button_bar(menu_bar);
     }
     uint8_t selection = 0;
     do {
@@ -60,7 +85,7 @@ lcd_menu ::lcd_menu(menu_list* root, ILI934X* disp) {
     } while (selection == 0 || (selection > items && selection != 8));
 
     if (selection != 8) {
-      menu_item actual = root->items[selection - 1];
+      menu_item actual = root->items[page * NUM_LINES + selection - 1];
       draw_menu_item(selection - 1, actual, true);
       delay(200);
 
@@ -76,8 +101,22 @@ lcd_menu ::lcd_menu(menu_list* root, ILI934X* disp) {
         exit = (actual.callback)(actual);
       }
     } else {  //menu bar
-        uint8_t pos=get_touch_button();
-        if (pos==1) return;   
+      uint8_t pos;
+      do {
+        pos = get_touch_button();
+      } while (pos == 0);
+      if (menu_bar.items[pos - 1].active) {
+        bar_item bi = menu_bar.items[pos - 1];
+        bi.selected = true;
+        draw_bar_item(bi);
+        delay(100);
+        bi.selected = false;
+        draw_bar_item(bi);
+        if (bi.id == 0) return;  //exit
+        if (bi.id == 2) page--;  //prev
+        if (bi.id == 3) page++;  //prev
+        redraw = true;
+      }
     }
   }
 }
@@ -108,30 +147,46 @@ void lcd_menu ::draw_menu_item(uint8_t row, menu_item item, bool selected) {
   }
 }
 
-void lcd_menu ::draw_button_bar(const char* btn1, const char* btn2, const char* btn3, const char* btn4) {
-  display->fillRect(0, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT, STATUS_BAR_HEIGHT, DISPLAY_WIDTH, COLOUR_BLACK);
-  const uint16_t button_width = 60;
-  const uint16_t button_height = 14;
-  const uint16_t padding = (DISPLAY_WIDTH - (4 * button_width)) / 5;
-  const char* btn_txt[] = { btn1, btn2, btn3, btn4 };
-  uint16_t button_x = padding;
-  for (uint8_t idx = 0; idx < 4; ++idx) {
-    bool active = strlen(btn_txt[idx]);
-    display->fillRoundedRect(button_x, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + 3, button_height, button_width, 3, active ? COLOUR_BLUE : COLOUR_GREY);
-    display->drawRoundedRect(button_x, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + 3, button_height, button_width, 3, active ? COLOUR_WHITE : COLOUR_LIGHTGREY);
-    display->drawString(button_x + ((button_width - (6 * strlen(btn_txt[idx]))) / 2), DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + 6, font_8x5, btn_txt[idx], COLOUR_WHITE, COLOUR_BLUE);
-    button_x += button_width + padding;
+void lcd_menu ::draw_button_bar(bar_menu b) {
+  display->fillRect(0, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT, STATUS_BAR_HEIGHT, (PADDING + BUTTON_WIDTH) * b.num_items + PADDING, COLOUR_BLACK);
+
+  for (uint8_t idx = 0; idx < b.num_items; ++idx) {
+
+    bar_item item = b.items[idx];
+    draw_bar_item(item);
   }
+}
+
+void lcd_menu::draw_bar_item(bar_item bi) {
+
+
+  uint16_t button_x = (PADDING + BUTTON_WIDTH) * bi.id + PADDING;
+  uint16_t bg = COLOUR_GREY;
+  uint16_t fg = COLOUR_LIGHTGREY;
+  if (bi.active) {
+    bg = COLOUR_BLUE;
+    fg = COLOUR_WHITE;
+  }
+  if (bi.selected) {
+    bg = COLOUR_ORANGE;
+    fg = COLOUR_WHITE;
+  }
+
+  display->fillRoundedRect(button_x, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + 3, BUTTON_HEIGHT, BUTTON_WIDTH, 3, bg);
+  display->drawRoundedRect(button_x, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + 3, BUTTON_HEIGHT, BUTTON_WIDTH, 3, fg);
+  display->drawString(button_x + ((BUTTON_WIDTH - (6 * strlen(bi.name))) / 2), DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + 6, font_8x5, bi.name, fg, bg);
 }
 
 uint8_t lcd_menu::get_touch_row() {
   static uint8_t last_touch = 0;
 
-  TouchPoint touch = touchscreen.getTouch();
+  int x, y;
 
-  if (touch.zRaw > 600) {
-    uint8_t row = (touch.y - MARGIN_TOP) / HEIGHT;
-    if (touch.x > 10 && touch.x < 300) {
+  if (get_touch(x, y) && y > MARGIN_TOP) {
+
+    uint8_t row = (y - MARGIN_TOP) / HEIGHT;
+
+    if (x > PADDING && x < (DISPLAY_WIDTH - PADDING)) {
       if (last_touch != row + 1) {
         last_touch = row + 1;
 
@@ -145,19 +200,55 @@ uint8_t lcd_menu::get_touch_row() {
 
 uint8_t lcd_menu::get_touch_button() {
   static uint8_t last_touch = 0;
+  int x, y;
 
-  TouchPoint touch = touchscreen.getTouch();
-
-  if (touch.zRaw > 600) {
-    uint8_t pos = touch.x / 80;  //320 / 4
-    if (touch.y > 200) {
-      if (last_touch != pos + 1) {
-        last_touch = pos + 1;
-        delay(100);
-        return pos + 1;
-      }
+  if (get_touch(x, y)) {
+    uint8_t pos = x / 80;  //320 / 4
+    s->println(pos);
+    //if (y > DISPLAY_HEIGHT - STATUS_BAR_HEIGHT) {
+    if (last_touch != pos + 1) {
+      last_touch = pos + 1;
+      delay(100);
+      return pos + 1;
     }
+    // }
   }
   last_touch = 0;
   return 0;
+}
+
+bool lcd_menu::get_touch(int& x, int& y) {
+  // Retrieve a point
+  static int mX = 0;
+  static int mY = 0;
+  static uint8_t count = 0;
+  TouchPoint p = touchscreen.getTouch();
+  x = p.x;
+  y = p.y;
+
+  if (p.zRaw < 600) {
+    count = 0;
+    mX = 0;
+    mY = 0;
+
+    //display->drawCircle(x, y, 2, COLOUR_BLACK);
+    return false;
+  }
+
+  if (mX == 0) mX = x;
+  if (mY == 0) mY = y;
+
+  mX = (mX + x) / 2;
+  mY = (mY + y) / 2;
+
+  count++;
+
+  x = mX;
+  y = mY;
+
+  //display->drawCircle(mX, mY, 2, COLOUR_RED);
+
+  if (count < 10) return false;
+  count = 0;
+  return true;
 }

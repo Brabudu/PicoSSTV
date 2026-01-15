@@ -193,22 +193,6 @@ uint16_t scaled_image[214 * 160];
 char txcallsign_text[10] = CALLSIGN char rxcallsign_text[10];
 char rsv_text[4];
 
-struct s_settings {
-  uint8_t slideshow_timeout;
-  uint8_t lost_signal_timeout;
-  uint8_t min_completion;
-  uint8_t transmit_mode;
-  uint8_t auto_slant_correction;
-  uint8_t overlay;
-  uint8_t touch;
-  uint8_t wifi;
-  uint8_t color1;
-  uint8_t color2;
-  uint8_t color3;
-
-  char overlay_text[25];
-};
-
 s_settings settings = {
   3,                //5 seconds
   3,                //30 seconds

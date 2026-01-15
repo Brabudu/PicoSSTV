@@ -6,6 +6,14 @@ XPT2046_Bitbang::XPT2046_Bitbang(uint8_t mosiPin, uint8_t misoPin, uint8_t clkPi
   cal = TouchCalibration{ 0, 4095, 0, 4095 };
 }
 
+void XPT2046_Bitbang::setCalibration(uint16_t xMin, uint16_t xMax, uint16_t yMin, uint16_t yMax) {
+  cal.xMin = xMin;
+  cal.yMin = yMin;
+  cal.xMax = xMax;
+  cal.yMax = yMax;
+}
+
+
 void XPT2046_Bitbang::begin() {
   pinMode(_mosiPin, OUTPUT);
   pinMode(_misoPin, INPUT);

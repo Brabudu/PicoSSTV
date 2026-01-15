@@ -8,36 +8,62 @@
 struct menu_item;
 struct menu_list;
 
+struct bar_menu;
+struct bar_item;
+
 /* Function pointer */
-typedef bool (*GeneralFunction)(menu_item);
+typedef bool (*GeneralMenuFunction)(menu_item);
 
 typedef struct menu_list {
-  uint8_t id;
+  const uint8_t id;
   const char *title;
-  uint8_t num_items;
-  GeneralFunction callback;
-  menu_item *items;  // flexible array member
+  const uint8_t num_items;
+  const menu_item *items;  // flexible array member
 } menu_list;
 
 typedef struct menu_item {
-  uint8_t id;
+  const uint8_t id;
   const char *name;
   bool active;
   bool state;
-  bool is_on_off;
-  GeneralFunction callback;
+  const bool is_on_off;
+  const GeneralMenuFunction callback;
   menu_list *sub_menu;
 } menu_item;
 
+#define MENU_ITEM(_id, _name, _onoff, _callback, _submenu) \
+  { .id = _id, .name = _name, .active = true, .state = false, .is_on_off = _onoff, .callback = _callback, .sub_menu = _submenu }
+
+#define MENU_LIST(_id, _title, _num, _callback, _items) \
+  { .id = _id, .title = _title, .num_items = _num, .items = _items }
+
 ///////////////////////
+
+#define BAR_ITEM(_id, _name, _active) \
+  { .id = _id, .name = _name, .active = _active, .selected = false }
+
+typedef struct bar_item {
+  const uint8_t id;
+  const char *name;
+  bool active;
+  bool selected;
+} bar_item;
+
+typedef struct bar_menu {
+  const uint8_t num_items;
+  bar_item *items;  
+} bar_menu;
 
 class lcd_menu {
 
 private:
   ILI934X *display;
+  uint8_t page=0;
+  bool get_touch(int &x, int &y);
   uint8_t get_touch_row();
   uint8_t get_touch_button();
-  void draw_button_bar(const char* btn1, const char* btn2, const char* btn3, const char* btn4);
+  void draw_button_bar(bar_menu b);
+  void draw_bar_item(bar_item bi);
   void draw_menu_item(uint8_t row, menu_item item, bool selected);
 public:
   lcd_menu(menu_list *root, ILI934X *disp);

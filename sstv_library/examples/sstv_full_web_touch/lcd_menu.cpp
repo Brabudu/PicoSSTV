@@ -29,7 +29,7 @@
 
 extern Stream* s;
 extern XPT2046_Bitbang touchscreen;
-
+extern ILI934X* display;
 
 bar_item menu_bar_items[] = {
   BAR_ITEM(0, "Exit", true),
@@ -40,15 +40,21 @@ bar_item menu_bar_items[] = {
 
 bar_menu menu_bar = { 4, menu_bar_items };
 
-lcd_menu ::lcd_menu(menu_list* root, ILI934X* disp) {
-  delay(1000);
+/////////////////////////////////
 
-  display = disp;
 
+///////////////////////////
+
+
+lcd_menu ::lcd_menu() {
   touchscreen.setCalibration(100, 3900, 100, 3900);
+}
+
+void lcd_menu ::launch_menu(menu_list* root) {
 
   bool redraw = true;
   uint8_t items = 0;
+  page = 0;
 
   bool exit = false;
 
@@ -85,20 +91,20 @@ lcd_menu ::lcd_menu(menu_list* root, ILI934X* disp) {
     } while (selection == 0 || (selection > items && selection != 8));
 
     if (selection != 8) {
-      menu_item actual = root->items[page * NUM_LINES + selection - 1];
-      draw_menu_item(selection - 1, actual, true);
+      menu_item* actual = &root->items[page * NUM_LINES + selection - 1];
+      draw_menu_item(selection - 1, *actual, true);
       delay(300);
 
-      if (actual.sub_menu != NULL) {
-        root = actual.sub_menu;
+      if (actual->sub_menu != NULL) {
+        root = actual->sub_menu;
         redraw = true;
-      } else if (actual.is_on_off) {
-        actual.state = !(actual.state);
+      } else if (actual->is_on_off) {
+        actual->state = !(actual->state);
       }
-      draw_menu_item(selection - 1, actual, false);
+      draw_menu_item(selection - 1, *actual, false);
 
-      if (actual.callback != NULL) {
-        exit = (actual.callback)(actual);
+      if (actual->callback != NULL) {
+        exit = (actual->callback)(*actual);
       }
     } else {  //menu bar
       uint8_t pos;
@@ -204,14 +210,14 @@ uint8_t lcd_menu::get_touch_button() {
 
   if (get_touch(x, y)) {
     uint8_t pos = x / 80;  //320 / 4
-    s->println(pos);
-    //if (y > DISPLAY_HEIGHT - STATUS_BAR_HEIGHT) {
-    if (last_touch != pos + 1) {
-      last_touch = pos + 1;
-      delay(100);
-      return pos + 1;
+
+    if (y > DISPLAY_HEIGHT - STATUS_BAR_HEIGHT) {
+      if (last_touch != pos + 1) {
+        last_touch = pos + 1;
+        delay(100);
+        return pos + 1;
+      }
     }
-    // }
   }
   last_touch = 0;
   return 0;

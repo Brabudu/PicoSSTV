@@ -21,23 +21,43 @@ struct s_settings {
 
 extern s_settings settings;
 
-bool autoslant(menu_item m) {
-  settings.auto_slant_correction=m.state;
+bool tx_mode(menu_item m) {
+  settings.transmit_mode = m.id;
   return true;
 }
 
+bool autoslant(menu_item m) {
+  settings.auto_slant_correction = m.state;
+  return false;
+}
+
+/////////////////////
+
+extern void reconnectWiFiAndClient();
+extern void disconnectWiFi();
+
+bool wifi(menu_item m) {
+  settings.wifi = m.state;
+  if (settings.wifi) {
+    reconnectWiFiAndClient();
+  } else {
+    disconnectWiFi();
+  }
+  return false;
+}
+
 bool ls_timeout(menu_item m) {
-  settings.lost_signal_timeout=m.id;
+  settings.lost_signal_timeout = m.id;
   return true;
 }
 
 bool sl_timeout(menu_item m) {
-  settings.slideshow_timeout=m.id;
+  settings.slideshow_timeout = m.id;
   return true;
 }
 
 bool im_save(menu_item m) {
-  settings.min_completion=m.id;
+  settings.min_completion = m.id;
   return true;
 }
 
@@ -84,23 +104,68 @@ menu_item im_save_items[] = {
 
 menu_list im_save_menu = MENU_LIST(0, "Min % to save", 3, NULL, im_save_items);
 
+menu_item tx_mode_items[] = {
+  MENU_ITEM(0, "Martin M1", false, &tx_mode, NULL),
+  MENU_ITEM(1, "Martin M2", false, &tx_mode, NULL),
+  MENU_ITEM(2, "Scottie S1", false, &tx_mode, NULL),
+  MENU_ITEM(3, "Scottie S2", false, &tx_mode, NULL),
+  MENU_ITEM(4, "Scottie DX", false, &tx_mode, NULL),
+  MENU_ITEM(5, "PD 50", false, &tx_mode, NULL),
+  MENU_ITEM(6, "PD 90", false, &tx_mode, NULL),
+  MENU_ITEM(7, "PD 120", false, &tx_mode, NULL),
+  MENU_ITEM(8, "PD 180", false, &tx_mode, NULL),
+  MENU_ITEM(9, "Robot 24", false, &tx_mode, NULL),
+  MENU_ITEM(10, "Robot 36", false, &tx_mode, NULL),
+  MENU_ITEM(11, "Robot 72", false, &tx_mode, NULL),
+  MENU_ITEM(12, "Robot B&W 8", false, &tx_mode, NULL),
+  MENU_ITEM(13, "Robot B&W 12", false, &tx_mode, NULL),
+  MENU_ITEM(14, "Robot B&W 24", false, &tx_mode, NULL),
+  MENU_ITEM(15, "Robot B&W 36", false, &tx_mode, NULL)
+};
+
+menu_list tx_mode_menu = MENU_LIST(0, "Tx mode", 16, NULL, tx_mode_items);
+
 /////////////////////////////////////////
 
 menu_item settings_items[] = {
-  MENU_ITEM(0, "Auto slant", true, &autoslant, NULL),
-  MENU_ITEM(1, "Lost sig. timeout", false, NULL, &ls_timeout_menu),
-  MENU_ITEM(1, "Slideshow timeout", false, NULL, &sl_timeout_menu),
-  MENU_ITEM(2, "Min save %", false, NULL, &im_save_menu),
-  MENU_ITEM(3, "Transmit mode", false, NULL, NULL)
+  MENU_ITEM(0, "Wi-fi", true, &wifi, NULL),
+  MENU_ITEM(1, "Auto slant", true, &autoslant, NULL),
+  MENU_ITEM(2, "Transmit mode", false, NULL, &tx_mode_menu),
+  MENU_ITEM(3, "Min save %", false, NULL, &im_save_menu),
+  MENU_ITEM(4, "Lost sig. timeout", false, NULL, &ls_timeout_menu),
+  MENU_ITEM(5, "Slideshow timeout", false, NULL, &sl_timeout_menu)
+
+
 };
 
-menu_list settings_menu = MENU_LIST(0, "Settings", 5, NULL, settings_items);
+menu_list settings_menu = MENU_LIST(0, "Settings", 6, NULL, settings_items);
 
 /////////////////////////////////////////////
 
+enum e_view_mode { rx_mode,
+                   slideshow_mode };
+
+extern e_view_mode view_mode;
+
+bool im_slideshow(menu_item m) {
+  view_mode = slideshow_mode;
+  return true;
+}
+
+/////////////////////////////////////////////
+extern void tx_file_browser();
+
+bool tx_file(menu_item m){
+  tx_file_browser();
+  return true;
+}
+
+
+////////////////
+
 menu_item main_items[] = {
-  MENU_ITEM(0, "Transmit", false, NULL, NULL),
-  MENU_ITEM(1, "Slideshow", false, NULL, NULL),
+  MENU_ITEM(0, "Transmit", false, &tx_file, NULL),
+  MENU_ITEM(1, "Slideshow", false, &im_slideshow, NULL),
   MENU_ITEM(2, "Settings", false, NULL, &settings_menu)
 };
 
@@ -108,3 +173,18 @@ menu_list main_menu = MENU_LIST(0, "Main Menu", 3, NULL, main_items);
 
 ///////////////////////////////////////
 
+///////////////////
+void sync_menu() {
+  settings_items[0].state = settings.wifi;
+  settings_items[1].state = settings.auto_slant_correction;
+}
+
+
+//////////////////
+
+bar_item sstv_bar_items[] = {
+  BAR_ITEM(0, "Menu", true),
+  BAR_ITEM(1, "Reply", true),
+};
+
+bar_menu sstv_bar = { 2, sstv_bar_items };

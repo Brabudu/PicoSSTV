@@ -18,7 +18,7 @@ typedef struct menu_list {
   const uint8_t id;
   const char *title;
   const uint8_t num_items;
-  const menu_item *items;  // flexible array member
+  menu_item *items;  // flexible array member
 } menu_list;
 
 typedef struct menu_item {
@@ -51,21 +51,23 @@ typedef struct bar_item {
 
 typedef struct bar_menu {
   const uint8_t num_items;
-  bar_item *items;  
+  bar_item *items;
 } bar_menu;
 
 class lcd_menu {
 
 private:
-  ILI934X *display;
-  uint8_t page=0;
+  uint8_t page = 0;
+
   bool get_touch(int &x, int &y);
   uint8_t get_touch_row();
   uint8_t get_touch_button();
-  void draw_button_bar(bar_menu b);
+
+  
   void draw_bar_item(bar_item bi);
   void draw_menu_item(uint8_t row, menu_item item, bool selected);
 public:
-  lcd_menu(menu_list *root, ILI934X *disp);
- 
+  lcd_menu();
+  void launch_menu(menu_list *root);
+  void draw_button_bar(bar_menu b);
 };

@@ -64,7 +64,7 @@
 #include "main_menu.h"
 
 #if defined(PICO_RP2350)
-//#define WIFI  //Comment for disabling wifi
+#define WIFI  //Comment for disabling wifi
 #endif
 
 #ifdef WIFI
@@ -172,6 +172,8 @@ ILI934X* display;
 XPT2046_Bitbang touchscreen(T_MOSI_PIN, T_MISO_PIN, T_CLK_PIN, T_CS_PIN);
 touch_keyboard t_keyboard;
 
+lcd_menu sstv_menu = lcd_menu();
+
 Stream* s;
 
 button button_up(26);  //17
@@ -179,8 +181,7 @@ button button_down(20);
 button button_right(21);
 button button_left(22);
 
-enum e_view_mode { rx_mode,
-                   slideshow_mode };
+
 e_view_mode view_mode;
 
 static const uint16_t overlay_width = 320;
@@ -194,21 +195,21 @@ char txcallsign_text[10] = CALLSIGN char rxcallsign_text[10];
 char rsv_text[4];
 
 s_settings settings = {
-  3,                //5 seconds
-  3,                //30 seconds
-  2,                // 50%
-  1,                //martin m2
-  1,                //auto slant correction on
-  1,                // overlay on
-  #ifdef touch_installed
-    1,
-  #else
-    0,
-  #endif
-  0,                //wifi off
-  8,                //orange
-  8,                //orange
-  2,                //red
+  3,  //5 seconds
+  3,  //30 seconds
+  2,  // 50%
+  1,  //martin m2
+  1,  //auto slant correction on
+  1,  // overlay on
+#ifdef touch_installed
+  1,
+#else
+  0,
+#endif
+  0,  //wifi off
+  8,  //orange
+  8,  //orange
+  2,  //red
   { 0 }
 };
 
@@ -552,13 +553,11 @@ void setup() {
   s = &Serial;
 
   load();
+  sync_menu();
 
 #ifdef WIFI
   if (settings.wifi) connectToWiFi();
 #endif
-
-  lcd_menu(&main_menu, display);
-
 }
 
 void loop() {
@@ -591,7 +590,7 @@ void loop() {
 
     image_complete = sstv_decoder.decode_image_non_blocking(timeout_seconds, settings.auto_slant_correction, image_in_progress);
 
-    if ((image_in_progress) && (!last_image_in_progress)) {
+    if ((image_in_progress) && (!last_image_in_progress)) { //Starting reception
       draw_blank_screen();
       draw_button_bar("", "Stop", "", "");
     }
@@ -606,8 +605,7 @@ void loop() {
       }
       sstv_decoder.open("temp");
       draw = true;
-    }
-    if (image_in_progress) {
+    } else if (image_in_progress) {
       view_mode = rx_mode;
       if (button_right.is_pressed() || touch_button == 2) {
         sstv_decoder.stop();
@@ -616,8 +614,12 @@ void loop() {
       }
     } else {
       if (button_left.is_pressed() || touch_button == 1) {
-        launch_menu();
-        if (view_mode == slideshow_mode) slideshow.launch_slideshow();
+        //launch_menu();
+        sstv_menu.launch_menu(&main_menu);
+
+        if (view_mode == slideshow_mode) {
+          slideshow.launch_slideshow();
+          }
         if (view_mode == rx_mode) {
           draw_blank_screen();
           touch_button = 0;
@@ -643,7 +645,8 @@ void loop() {
 
     } else if (view_mode == rx_mode && draw) {
 
-      draw_button_bar("Menu", "Reply", "", "");
+      //draw_button_bar("Menu", "Reply", "", "");
+      sstv_menu.draw_button_bar(sstv_bar);
 
       display->fillRect(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT - 1, STATUS_BAR_HEIGHT, DISPLAY_WIDTH / 2, COLOUR_BLACK);
       draw = false;
@@ -937,12 +940,12 @@ void tx_file_browser() {
         delay(10);
         color = t_keyboard.get_key_press();
       } while (color == '-');
-      if (touch_row==1) settings.color1=color;
-      else if (touch_row ==2) settings.color2=color;
-      else settings.color3=color;
+      if (touch_row == 1) settings.color1 = color;
+      else if (touch_row == 2) settings.color2 = color;
+      else settings.color3 = color;
       save();
-      redraw=true;
-    } 
+      redraw = true;
+    }
 
 
     if (button_up.is_pressed() || touch_button == 4) {
@@ -1121,11 +1124,11 @@ void launch_menu() {
         case 7:
           {  //overlay
             const char* const menu_selections[] = { "Off", "On" };
-            #ifdef touch_installed
-            #ifdef buttons_installed
-              menu("Touch mode", settings.touch, menu_selections, 2);
-            #endif
-            #endif
+#ifdef touch_installed
+#ifdef buttons_installed
+            menu("Touch mode", settings.touch, menu_selections, 2);
+#endif
+#endif
           }
           break;
 #ifdef WIFI

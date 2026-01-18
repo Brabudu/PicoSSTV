@@ -634,6 +634,7 @@ void loop() {
         overlay.draw_image(20, 130, 106, 80, scaled_image);
         overlay.draw_rect(19, 129, 108, 82, COLOUR_WHITE);
         settings.transmit_mode = convert_mode(sstv_decoder.getLastMode());
+        delay(500);
         tx_file_browser();
         draw = true;
       }
@@ -1416,6 +1417,7 @@ void rsv_entry(char string[]) {
   uint8_t cursor = 0;
   uint8_t n = 3;
 
+  
   display->clear(COLOUR_BLACK);
 
   if (!settings.touch) {
@@ -1461,6 +1463,7 @@ void rsv_entry(char string[]) {
     } while (value == '-');
     strcpy(string, rsv[(int)value]);
   }
+  
 }
 
 #define version 102

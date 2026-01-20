@@ -614,6 +614,7 @@ void loop() {
       if (button_left.is_pressed() || touch_button == 1) {
         touch_button = 0;
         sstv_menu.launch_menu(&main_menu);
+        save();
 
         if (view_mode == slideshow_mode) {
           slideshow.launch_slideshow();
@@ -699,8 +700,12 @@ void draw_splash_screen() {
 }
 
 void draw_blank_screen() {
+  
   display->clear(COLOUR_NAVY);
   display->drawString((DISPLAY_WIDTH - (12 * strlen("Pico SSTV"))) / 2, 100, font_16x12, "Pico SSTV", COLOUR_GREY, COLOUR_NAVY);
+#ifdef WIFI
+  display->drawString((DISPLAY_WIDTH - (12 * strlen(WiFi.localIP().toString().c_str()))) / 2, 130, font_16x12, WiFi.localIP().toString().c_str(), COLOUR_GREY, COLOUR_NAVY);
+#endif
 }
 
 void configure_display() {

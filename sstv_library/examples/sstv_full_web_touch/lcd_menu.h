@@ -18,7 +18,8 @@ typedef struct menu_list {
   const uint8_t id;
   const char *title;
   const uint8_t num_items;
-  menu_item *items;  // flexible array member
+  const bool is_selectable_list;
+  menu_item *items;  
 } menu_list;
 
 typedef struct menu_item {
@@ -34,8 +35,8 @@ typedef struct menu_item {
 #define MENU_ITEM(_id, _name, _onoff, _callback, _submenu) \
   { .id = _id, .name = _name, .active = true, .state = false, .is_on_off = _onoff, .callback = _callback, .sub_menu = _submenu }
 
-#define MENU_LIST(_id, _title, _num, _callback, _items) \
-  { .id = _id, .title = _title, .num_items = _num, .items = _items }
+#define MENU_LIST(_id, _title, _num, _selectable, _items) \
+  { .id = _id, .title = _title, .num_items = _num, .is_selectable_list = _selectable, .items = _items }
 
 ///////////////////////
 

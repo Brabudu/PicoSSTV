@@ -79,7 +79,7 @@ menu_item ls_timeout_items[] = {
   MENU_ITEM(8, "10 minutes", false, &ls_timeout, NULL)
 };
 
-menu_list ls_timeout_menu = MENU_LIST(0, "Lost signal timeout", 9, NULL, ls_timeout_items);
+menu_list ls_timeout_menu = MENU_LIST(0, "Lost signal timeout", 9, true, ls_timeout_items);
 
 ///////////////////////////////
 
@@ -96,7 +96,7 @@ menu_item sl_timeout_items[] = {
 
 };
 
-menu_list sl_timeout_menu = MENU_LIST(0, "Slideshow timeout", 9, NULL, sl_timeout_items);
+menu_list sl_timeout_menu = MENU_LIST(0, "Slideshow timeout", 9, true, sl_timeout_items);
 
 /////////////////////////////////////////
 
@@ -106,7 +106,7 @@ menu_item im_save_items[] = {
   MENU_ITEM(2, "50%", false, &im_save, NULL),
 };
 
-menu_list im_save_menu = MENU_LIST(0, "Min % to save", 3, NULL, im_save_items);
+menu_list im_save_menu = MENU_LIST(0, "Min % to save", 3, true, im_save_items);
 
 menu_item tx_mode_items[] = {
   MENU_ITEM(0, "Martin M1", false, &tx_mode, NULL),
@@ -127,7 +127,7 @@ menu_item tx_mode_items[] = {
   MENU_ITEM(15, "Robot B&W 36", false, &tx_mode, NULL)
 };
 
-menu_list tx_mode_menu = MENU_LIST(0, "Tx mode", 16, NULL, tx_mode_items);
+menu_list tx_mode_menu = MENU_LIST(0, "Tx mode", 16, true, tx_mode_items);
 
 /////////////////////////////////////////
 
@@ -142,7 +142,7 @@ menu_item settings_items[] = {
 
 };
 
-menu_list settings_menu = MENU_LIST(0, "Settings", 6, NULL, settings_items);
+menu_list settings_menu = MENU_LIST(0, "Settings", 6, false, settings_items);
 
 /////////////////////////////////////////////
 
@@ -173,7 +173,7 @@ menu_item main_items[] = {
   MENU_ITEM(2, "Settings", false, NULL, &settings_menu)
 };
 
-menu_list main_menu = MENU_LIST(0, "Main Menu", 3, NULL, main_items);
+menu_list main_menu = MENU_LIST(0, "Main Menu", 3, false, main_items);
 
 ///////////////////////////////////////
 
@@ -181,6 +181,10 @@ menu_list main_menu = MENU_LIST(0, "Main Menu", 3, NULL, main_items);
 void sync_menu() {
   settings_items[0].state = settings.wifi;
   settings_items[1].state = settings.auto_slant_correction;
+  tx_mode_items[settings.transmit_mode].state = true;
+  im_save_items[settings.min_completion].state = true;
+  sl_timeout_items[settings.slideshow_timeout].state = true;
+  ls_timeout_items[settings.lost_signal_timeout].state = true;
 }
 
 

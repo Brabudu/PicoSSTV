@@ -100,12 +100,21 @@ void lcd_menu ::launch_menu(menu_list* root) {
         redraw = true;
       } else if (actual->is_on_off) {
         actual->state = !(actual->state);
+      } else if (root->is_selectable_list) {
+        for (int i = 0; i < root->num_items; i++) {
+          root->items[i].state = false;
+        }
+        root->items[actual->id].state = true;
+        
       }
+
+
       draw_menu_item(selection - 1, *actual, false);
 
       if (actual->callback != NULL) {
         exit = (actual->callback)(*actual);
       }
+
     } else {  //menu bar
       uint8_t pos;
       do {
@@ -142,9 +151,11 @@ void lcd_menu ::draw_menu_item(uint8_t row, menu_item item, bool selected) {
   display->drawString(MARGIN_LEFT + 5 + delta, MARGIN_TOP + (row * HEIGHT) + 4 - delta, font_16x12, item.name, COLOUR_WHITE, color);
 
   if (item.sub_menu == NULL) {  //Final selection
-    if (item.is_on_off) {
+    if (item.is_on_off) {       //toggle item
       if (item.state) display->drawString(MARGIN_LEFT + WIDTH - 30, MARGIN_TOP + (row * HEIGHT) + 4, font_16x12, "ON", COLOUR_YELLOW, color);
       else display->drawString(MARGIN_LEFT + WIDTH - 40, MARGIN_TOP + (row * HEIGHT) + 4, font_16x12, "OFF", COLOUR_ORANGE, color);
+    } else {  //Selected item
+      if (item.state) display->drawString(MARGIN_LEFT + WIDTH - 20, MARGIN_TOP + (row * HEIGHT) + 4, font_16x12, "*", COLOUR_YELLOW, color);
     }
   } else {  // Submenu
     display->drawString(MARGIN_LEFT + WIDTH - 20, MARGIN_TOP + (row * HEIGHT) + 4, font_16x12, ">", COLOUR_YELLOW, color);
@@ -163,8 +174,8 @@ void lcd_menu ::draw_button_bar(bar_menu b) {
 
 uint8_t lcd_menu::poll_button_bar(bar_menu b) {
   static uint32_t last_update_time = millis();
- 
-  if ((millis() - last_update_time) < 10) return 0;
+
+  if ((millis() - last_update_time) < 5) return 0;
 
   last_update_time = millis();
 
@@ -178,8 +189,7 @@ uint8_t lcd_menu::poll_button_bar(bar_menu b) {
 void lcd_menu::flash_button_bar_item(bar_menu b, uint8_t id, int millis) {
 
   bar_item bi = b.items[id];
-  //s->println(bi.id);
-  //s->println(id);
+  
   bi.selected = true;
   draw_bar_item(bi);
   delay(millis);

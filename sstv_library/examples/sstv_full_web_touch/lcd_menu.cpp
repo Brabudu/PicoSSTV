@@ -43,8 +43,8 @@ bar_menu menu_bar = { 4, menu_bar_items };
 /////////////////////////////////
 
 
-///////////////////////////
 
+///////////////////////////
 
 lcd_menu ::lcd_menu() {
   touchscreen.setCalibration(100, 3900, 100, 3900);
@@ -112,12 +112,10 @@ void lcd_menu ::launch_menu(menu_list* root) {
         pos = get_touch_button();
       } while (pos == 0);
       if (menu_bar.items[pos - 1].active) {
+
+        flash_button_bar_item(menu_bar, pos - 1, 100);
+
         bar_item bi = menu_bar.items[pos - 1];
-        bi.selected = true;
-        draw_bar_item(bi);
-        delay(100);
-        bi.selected = false;
-        draw_bar_item(bi);
         if (bi.id == 0) return;  //exit
         if (bi.id == 2) page--;  //prev
         if (bi.id == 3) page++;  //prev
@@ -163,6 +161,31 @@ void lcd_menu ::draw_button_bar(bar_menu b) {
   }
 }
 
+uint8_t lcd_menu::poll_button_bar(bar_menu b) {
+  static uint32_t last_update_time = millis();
+ 
+  if ((millis() - last_update_time) < 10) return 0;
+
+  last_update_time = millis();
+
+  uint8_t pos = get_touch_button();
+  if (pos == 0) return 0;
+
+  if (b.items[pos - 1].active) flash_button_bar_item(b, pos - 1, 100);
+  return pos;
+}
+
+void lcd_menu::flash_button_bar_item(bar_menu b, uint8_t id, int millis) {
+
+  bar_item bi = b.items[id];
+  //s->println(bi.id);
+  //s->println(id);
+  bi.selected = true;
+  draw_bar_item(bi);
+  delay(millis);
+  bi.selected = false;
+  draw_bar_item(bi);
+}
 void lcd_menu::draw_bar_item(bar_item bi) {
 
 
@@ -212,6 +235,7 @@ uint8_t lcd_menu::get_touch_button() {
     uint8_t pos = x / 80;  //320 / 4
 
     if (y > DISPLAY_HEIGHT - STATUS_BAR_HEIGHT) {
+
       if (last_touch != pos + 1) {
         last_touch = pos + 1;
         delay(100);
@@ -254,7 +278,8 @@ bool lcd_menu::get_touch(int& x, int& y) {
 
   //display->drawCircle(mX, mY, 2, COLOUR_RED);
 
-  if (count < 10) return false;
+  if (count < 3) return false;
+  //display->drawCircle(mX, mY, 2, COLOUR_GREEN);
   count = 0;
   return true;
 }

@@ -63,11 +63,12 @@ private:
   uint8_t get_touch_row();
   uint8_t get_touch_button();
 
-  
   void draw_bar_item(bar_item bi);
   void draw_menu_item(uint8_t row, menu_item item, bool selected);
+  void flash_button_bar_item(bar_menu b, uint8_t id, int millis);
 public:
   lcd_menu();
   void launch_menu(menu_list *root);
   void draw_button_bar(bar_menu b);
+  uint8_t poll_button_bar(bar_menu b);
 };

@@ -1,6 +1,10 @@
 
 #include "lcd_menu.h"
 
+
+static const uint16_t timeouts[] = { UINT16_MAX, 1, 2, 5, 10, 30, 60, 60 * 2, 60 * 5 };
+static const float completion[] = { 0.9, 0.75, 0.5 };
+
 ///////////////////////////////////
 
 struct s_settings {
@@ -155,7 +159,7 @@ bool im_slideshow(menu_item m) {
 /////////////////////////////////////////////
 extern void tx_file_browser();
 
-bool tx_file(menu_item m){
+bool tx_file(menu_item m) {
   tx_file_browser();
   return true;
 }
@@ -188,3 +192,54 @@ bar_item sstv_bar_items[] = {
 };
 
 bar_menu sstv_bar = { 2, sstv_bar_items };
+
+//////////////////
+
+bar_item sstv_sl_bar_items[] = {
+  BAR_ITEM(0, "Menu", true),
+  BAR_ITEM(1, "Delete", true),
+  BAR_ITEM(2, "Prev", true),
+  BAR_ITEM(3, "Next", true)
+};
+
+bar_menu sstv_sl_bar = { 4, sstv_sl_bar_items };
+
+//////////////////
+
+bar_item sstv_tx_bar_items[] = {
+  BAR_ITEM(0, "Transmit", true),
+  BAR_ITEM(1, "Cancel", true),
+  BAR_ITEM(2, "Prev", true),
+  BAR_ITEM(3, "Next", true)
+};
+
+bar_menu sstv_tx_bar = { 4, sstv_tx_bar_items };
+//////////////////
+
+bar_item sstv_txx_bar_items[] = {
+  BAR_ITEM(0, "Transmit", false),
+  BAR_ITEM(1, "Cancel", true),
+  BAR_ITEM(2, "Prev", false),
+  BAR_ITEM(3, "Next", false)
+};
+
+bar_menu sstv_txx_bar = { 4, sstv_txx_bar_items };
+
+///////////////////////
+bar_item sstv_rx_bar_items[] = {
+  BAR_ITEM(0, "", false),
+  BAR_ITEM(1, "Stop", true),
+};
+
+bar_menu sstv_rx_bar = { 2, sstv_rx_bar_items };
+
+///////////////////////
+
+bar_item sstv_text_bar_items[] = {
+  BAR_ITEM(0, "<", true),
+  BAR_ITEM(1, ">", true),
+  BAR_ITEM(2, "+", true),
+  BAR_ITEM(3, "-", true)
+};
+
+bar_menu sstv_text_bar = { 4, sstv_text_bar_items };

@@ -151,13 +151,13 @@ const char* password = "Miagolina25!";
 
 void draw_banner(const char* message, uint16_t y = 0);
 void draw_status_bar(const char* message);
-void draw_button_bar(const char* btn1, const char* btn2, const char* btn3, const char* btn4);
+
 void configure_display();
 void initialise_sdcard();
 void get_new_filename(char* buffer, uint16_t buffer_size);
 int16_t display_image(const char* filename, bool show_overlay = false);
 void get_timeout_seconds(const char* title, uint8_t& menu_selection);
-void launch_menu();
+
 uint16_t count_bitmaps(Dir& root);
 void get_bitmap_index(Dir& root, uint16_t index);
 void create_thumbnail(const char* filename, e_mode mode);
@@ -406,7 +406,7 @@ class c_sstv_encoder_pwm : public c_sstv_encoder {
       audio_buffer_index = 0;
       sample_max = scaled_sample;
       sample_min = scaled_sample;
-      if (button_left.is_pressed() || get_touch_button() == 1) abort();
+      if (button_right.is_pressed() || sstv_menu.poll_button_bar(sstv_bar) == 2) abort();
     } else {
       sample_max = max(sample_max, scaled_sample);
       sample_min = min(sample_min, scaled_sample);
@@ -484,8 +484,9 @@ public:
 
   void update_slideshow() {
     if (num_bitmaps == 0) return;
-    delay(50);
-    uint8_t touch_button = get_touch_button();
+
+    uint8_t touch_button = sstv_menu.poll_button_bar(sstv_sl_bar);
+
     bool redraw = false;
     static const uint16_t timeouts[] = { 0, 1, 2, 5, 10, 30, 60, 60 * 2, 60 * 5 };
     uint16_t timeout_milliseconds = 1000 * timeouts[settings.slideshow_timeout];
@@ -532,7 +533,7 @@ public:
       uint16_t width = strlen(filename.c_str()) * 6 + 10;
       draw_banner(filename.c_str());
       if (mode >= 0) draw_banner(rx_modes[mode], 200);
-      draw_button_bar("Menu", "Delete", "Last", "Next");
+      sstv_menu.draw_button_bar(sstv_sl_bar);
       last_update_time = millis();
     }
   }
@@ -561,7 +562,7 @@ void setup() {
 }
 
 void loop() {
-  static uint8_t counter = 0;
+
 
   static uint8_t touch_button = 0;
 
@@ -579,24 +580,21 @@ void loop() {
   draw_blank_screen();
   strncpy(settings.overlay_text, "Pi Pico SSTV", 24);
   load();
-  //set_overlay(settings.overlay_text);
+
 
   while (1) {
 
-    //process rx regardless of mode
-    static const uint16_t timeouts[] = { UINT16_MAX, 1, 2, 5, 10, 30, 60, 60 * 2, 60 * 5 };
-    static const float completion[] = { 0.9, 0.75, 0.5 };
-    const uint16_t timeout_seconds = timeouts[settings.lost_signal_timeout];
+    image_complete = sstv_decoder.decode_image_non_blocking(timeouts[settings.lost_signal_timeout], settings.auto_slant_correction, image_in_progress);
 
-    image_complete = sstv_decoder.decode_image_non_blocking(timeout_seconds, settings.auto_slant_correction, image_in_progress);
-
-    if ((image_in_progress) && (!last_image_in_progress)) { //Starting reception
+    if ((image_in_progress) && (!last_image_in_progress)) {  //Starting reception
       draw_blank_screen();
-      draw_button_bar("", "Stop", "", "");
+      sstv_menu.draw_button_bar(sstv_rx_bar);
     }
+
     last_image_in_progress = image_in_progress;
 
     if (image_complete) {
+      //Save image
       sstv_decoder.close();
       if (sstv_decoder.getProgress() > completion[settings.min_completion]) {
         SDFS.rename("temp", rx_filename);
@@ -605,28 +603,28 @@ void loop() {
       }
       sstv_decoder.open("temp");
       draw = true;
-    } else if (image_in_progress) {
+    } else if (image_in_progress) {  //Receiving
       view_mode = rx_mode;
       if (button_right.is_pressed() || touch_button == 2) {
-        sstv_decoder.stop();
         touch_button = 0;
+        sstv_decoder.stop();
         return;
       }
-    } else {
+    } else {  //Idle
       if (button_left.is_pressed() || touch_button == 1) {
-        //launch_menu();
+        touch_button = 0;
         sstv_menu.launch_menu(&main_menu);
 
         if (view_mode == slideshow_mode) {
           slideshow.launch_slideshow();
-          }
+        }
         if (view_mode == rx_mode) {
           draw_blank_screen();
           touch_button = 0;
           draw = true;
         }
       } else if ((button_right.is_pressed() || touch_button == 2) && (view_mode != slideshow_mode)) {
-
+        touch_button = 0;
         text_entry(rxcallsign_text, 10);
         rsv_entry(rsv_text);
         rsv_text[3] = 0;
@@ -642,24 +640,26 @@ void loop() {
     if (view_mode == slideshow_mode) {
 
       slideshow.update_slideshow();
-      counter = 255;
+      if (view_mode == rx_mode) {  //quitting
+        draw = true;
+        draw_blank_screen();
+      }
+    }
+    if (view_mode == rx_mode) {
 
-    } else if (view_mode == rx_mode && draw) {
+      touch_button = sstv_menu.poll_button_bar(sstv_bar);
 
-      //draw_button_bar("Menu", "Reply", "", "");
-      sstv_menu.draw_button_bar(sstv_bar);
+      if (draw) {
+        sstv_menu.draw_button_bar(sstv_bar);
 
-      display->fillRect(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT - 1, STATUS_BAR_HEIGHT, DISPLAY_WIDTH / 2, COLOUR_BLACK);
-      draw = false;
+        display->fillRect(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT - 1, STATUS_BAR_HEIGHT, DISPLAY_WIDTH / 2, COLOUR_BLACK);
+        draw = false;
+      }
     }
 
-    counter++;
 
-    if (counter == 0) {
-      touch_button = get_touch_button();
-    } else {
-      touch_button = 0;
-    }
+
+
 
 #ifdef WIFI
     if ((WiFi.status() == WL_CONNECTED) && (!connected)) {
@@ -669,25 +669,6 @@ void loop() {
 #endif
   }
   sstv_decoder.stop();
-}
-
-uint8_t get_touch_button() {
-  static uint8_t last_touch = 0;
-
-  TouchPoint touch = touchscreen.getTouch();
-
-  if (touch.zRaw > 600) {
-    uint8_t pos = touch.x / 80;  //320 / 4
-    if (touch.y > 200) {
-      if (last_touch != pos + 1) {
-        last_touch = pos + 1;
-        delay(100);
-        return pos + 1;
-      }
-    }
-  }
-  last_touch = 0;
-  return 0;
 }
 
 uint8_t get_touch_row() {
@@ -788,22 +769,6 @@ void draw_status_bar(const char* message) {
   display->fillRect(0, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT - 1, STATUS_BAR_HEIGHT, DISPLAY_WIDTH / 4, COLOUR_BLACK);
 #define MARGIN ((STATUS_BAR_HEIGHT - 8) / 2)
   display->drawString(MARGIN, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + MARGIN, font_8x5, message, COLOUR_WHITE, COLOUR_BLACK);
-}
-
-void draw_button_bar(const char* btn1, const char* btn2, const char* btn3, const char* btn4) {
-  display->fillRect(0, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT - 1, STATUS_BAR_HEIGHT, DISPLAY_WIDTH, COLOUR_BLACK);
-  const uint16_t button_width = 60;
-  const uint16_t button_height = 14;
-  const uint16_t padding = (DISPLAY_WIDTH - (4 * button_width)) / 5;
-  const char* btn_txt[] = { btn1, btn2, btn3, btn4 };
-  uint16_t button_x = padding;
-  for (uint8_t idx = 0; idx < 4; ++idx) {
-    bool active = strlen(btn_txt[idx]);
-    display->fillRoundedRect(button_x, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + 2, button_height, button_width, 3, active ? COLOUR_BLUE : COLOUR_GREY);
-    display->drawRoundedRect(button_x, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + 2, button_height, button_width, 3, active ? COLOUR_WHITE : COLOUR_LIGHTGREY);
-    display->drawString(button_x + ((button_width - (6 * strlen(btn_txt[idx]))) / 2), DISPLAY_HEIGHT - STATUS_BAR_HEIGHT + MARGIN, font_8x5, btn_txt[idx], COLOUR_WHITE, COLOUR_BLUE);
-    button_x += button_width + padding;
-  }
 }
 
 uint16_t count_bitmaps(Dir& root) {
@@ -925,14 +890,14 @@ void tx_file_browser() {
 
   while (1) {
 
-    touch_row = get_touch_row();
+    //touch_row = sstv_menu.get_touch_row();
 
-    if (touch_row == 8) {
-      touch_button = get_touch_button();  //Menu bar
-    } else {
-      touch_button = 0;
-    }
-
+    //if (touch_row == 8) {
+    touch_button = sstv_menu.poll_button_bar(sstv_tx_bar);  //Menu bar
+                                                            // } else {
+    //  touch_button = 0;
+    // }
+    /*
     if (touch_row == 1 || touch_row == 2 || touch_row == 6 || touch_row == 7) {
       t_keyboard.make_color_kb();
       delay(500);
@@ -947,7 +912,7 @@ void tx_file_browser() {
       save();
       redraw = true;
     }
-
+*/
 
     if (button_up.is_pressed() || touch_button == 4) {
       if (bitmap_index == num_bitmaps - 1) bitmap_index = 0;
@@ -968,11 +933,11 @@ void tx_file_browser() {
       display_image(filename.c_str(), settings.overlay);
       //draw_banner(filename.c_str(), settings.overlay?30:0);
       draw_banner(rx_modes[convert_mode((e_sstv_tx_mode)settings.transmit_mode)]);
-      draw_button_bar("Transmit", "Cancel", "Last", "Next");
+      sstv_menu.draw_button_bar(sstv_tx_bar);
       redraw = false;
     }
     if (button_left.is_pressed() || touch_button == 1) {
-      draw_button_bar("Cancel", "", "", "");
+      sstv_menu.draw_button_bar(sstv_txx_bar);
       transmit_image(filename.c_str());
       return;
     }
@@ -1038,254 +1003,6 @@ void draw_overlay(String callsignSender, String callsignReceiver, String msg) {
   draw_outlined(20, 60, callsignReceiver, palette[settings.color1], COLOUR_WHITE);
   draw_outlined(40, 110, msg, palette[settings.color2], COLOUR_WHITE);
   draw_outlined(300 - callsignSender.length() * 28, 220, callsignSender, palette[settings.color3], COLOUR_WHITE);
-}
-
-void launch_menu() {
-  uint8_t menu_selection = 0;
-  const char* const menu_selections[] = {
-    "Receive",
-    "Transmit",
-    "Slideshow",
-    "Settings"
-  };
-
-#ifdef WIFI
-  String title = "Menu " + WiFi.localIP().toString();
-#else
-  String title = "Menu";
-#endif
-
-  menu(title.c_str(), menu_selection, menu_selections, 4);
-  if (menu_selection == 0) {
-    view_mode = rx_mode;
-    return;
-  } else if (menu_selection == 1) {
-    overlay.clear(0);
-    rxcallsign_text[0] = 0;
-    rsv_text[0] = 0;
-    tx_file_browser();
-    return;
-  } else if (menu_selection == 2) {
-    view_mode = slideshow_mode;
-    return;
-  } else {
-    uint8_t menu_selection = 0;
-    const char* const menu_selections[] = {
-      "Auto Slant Correction",
-      "Lost Signal Timeout",
-      "Min save %",
-      "Transmit Mode",
-      "Slideshow Timeout",
-      "Overlay",
-      "Overlay Text",
-      "Touch mode",
-      "Wifi"
-
-    };
-    if (menu("Settings", menu_selection, menu_selections, 9)) {
-      switch (menu_selection) {
-        case 0:
-          {  //Auto slant correction
-            const char* const menu_selections[] = { "Off", "On" };
-            menu("Auto Slant Correction", settings.auto_slant_correction, menu_selections, 2);
-          }
-          break;
-        case 1:
-          {  //lost signal timeout
-            get_timeout_seconds("Lost Signal Timeout", settings.lost_signal_timeout);
-          }
-          break;
-        case 2:
-          {
-            const char* const menu_selections[] = { "90%", "75%", "50%" };
-            menu("Min % for save image", settings.min_completion, menu_selections, 3);
-          }
-          break;
-        case 3:
-          {  //transmit mode
-            get_transmit_mode(settings.transmit_mode);
-          }
-          break;
-        case 4:
-          {  //slideshow_timeout
-            get_timeout_seconds("Slideshow Timeout", settings.slideshow_timeout);
-          }
-          break;
-        case 5:
-          {  //overlay
-            const char* const menu_selections[] = { "Off", "On" };
-            menu("Overlay text", settings.overlay, menu_selections, 2);
-          }
-          break;
-        case 6:
-          {  //overlay_text
-            text_entry(settings.overlay_text, 24);
-          }
-          break;
-        case 7:
-          {  //overlay
-            const char* const menu_selections[] = { "Off", "On" };
-#ifdef touch_installed
-#ifdef buttons_installed
-            menu("Touch mode", settings.touch, menu_selections, 2);
-#endif
-#endif
-          }
-          break;
-#ifdef WIFI
-        case 8:
-          {  //wifi
-            const char* const menu_selections[] = { "Off", "On" };
-            menu("Wifi", settings.wifi, menu_selections, 2);
-            if (settings.wifi) {
-              reconnectWiFiAndClient();
-            } else {
-              disconnectWiFi();
-            }
-          }
-          break;
-#endif
-      }
-    }
-    save();
-  }
-}
-
-void get_timeout_seconds(const char* title, uint8_t& menu_selection) {
-  const char* const menu_selections[] = {
-    "Never",
-    "1 Second",
-    "2 Seconds",
-    "5 Seconds",
-    "10 Seconds",
-    "30 Seconds",
-    "1 Minute",
-    "2 Minutes",
-    "5 Minutes",
-  };
-  menu(title, menu_selection, menu_selections, 9);
-}
-
-void get_transmit_mode(uint8_t& menu_selection) {
-
-
-  menu("Transmit Mode", menu_selection, tx_modes, 16);
-}
-
-bool menu(const char* title, uint8_t& selection, const char* const menu_items[], uint8_t num_selections) {
-  const uint8_t num_menu_items = num_selections;
-  const uint8_t num_items_on_screen = 7;
-  uint8_t offset = 0;
-  uint8_t menu_item = selection;
-  bool draw = true;
-
-  uint8_t touch_button = 0;
-
-  display->fillRect(0, 0, DISPLAY_HEIGHT, DISPLAY_WIDTH, COLOUR_BLACK);
-  display->fillRoundedRect(20, 0, 20, DISPLAY_WIDTH - 40, 5, COLOUR_BLUE);
-  display->drawRoundedRect(20, 0, 20, DISPLAY_WIDTH - 40, 5, COLOUR_WHITE);
-  uint16_t width = strlen(title) * 12;
-  display->drawString((DISPLAY_WIDTH - width) / 2, 2, font_16x12, title, COLOUR_WHITE, COLOUR_BLUE);
-
-  if (!settings.touch) {
-    if (menu_item > offset + num_items_on_screen - 1) {
-      offset = menu_item - num_items_on_screen;
-    }
-    draw_button_bar("OK", "Cancel", "Up", "Down");
-  } else {
-    if (num_menu_items <= num_items_on_screen) {
-      draw_button_bar("", "Cancel", "", "");
-    } else {
-      if (offset < num_items_on_screen) {
-        draw_button_bar("", "Cancel", "", "Next");
-      }
-    }
-  }
-
-
-  while (1) {
-
-#ifdef WIFI
-    if (settings.wifi) poll_wifi();
-#endif
-
-    if (settings.touch) {
-
-      touch_button = get_touch_button();
-
-      if ((button_up.is_pressed() || touch_button == 4) && (num_menu_items - offset > num_items_on_screen)) {
-        offset += num_items_on_screen;
-        if (num_menu_items - offset > num_items_on_screen) {
-          draw_button_bar("", "Cancel", "Prev", "Next");
-        } else {
-          draw_button_bar("", "Cancel", "Prev", "");
-        }
-
-        display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
-        draw = true;
-      }
-      if ((button_down.is_pressed() || touch_button == 3) && offset >= num_items_on_screen) {
-        offset -= num_items_on_screen;
-
-        if (offset > 0) {
-          draw_button_bar("", "Cancel", "Prev", "Next");
-        } else {
-          draw_button_bar("", "Cancel", "", "Next");
-        }
-
-        display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
-        draw = true;
-      }
-
-      if ((button_right.is_pressed() || touch_button == 2)) return false;  //cancel
-
-      menu_item = get_touch_row();
-
-      if (menu_item > 0 && menu_item <= 7) {
-        selection = menu_item + offset - 1;
-        delay(200);
-        return true;
-      }
-
-    } else {
-
-      if (button_down.is_pressed() && menu_item > 0) {
-        menu_item--;
-        draw = true;
-      }
-      if (button_up.is_pressed() && menu_item < num_menu_items - 1) {
-        menu_item++;
-        draw = true;
-      }
-      if (button_left.is_pressed()) {
-        selection = menu_item;
-        return true;
-      }
-      if (button_right.is_pressed()) return false;  //cancel
-
-      if (menu_item < offset) {
-        display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
-        offset--;
-      }
-      if (menu_item > offset + num_items_on_screen - 1) {
-        display->fillRect(0, 20, 200, 320, COLOUR_BLACK);
-        offset++;
-      }
-    }
-
-    if (draw) {
-      display->fillRect(0, 20, 200, 20, COLOUR_BLACK);
-      for (uint8_t idx = 0; idx < num_items_on_screen; ++idx) {
-        const uint8_t menu_item_index = idx + offset;
-        if (menu_item_index < num_selections) {
-          const bool active = menu_item == menu_item_index;
-          if (active && (!settings.touch)) display->fillCircle(10, 40 + ((idx)*25), 5, COLOUR_BLUE);
-          display->drawString(40, 32 + ((idx)*25), font_16x12, menu_items[menu_item_index], active && (!settings.touch) ? COLOUR_BLUE : COLOUR_GREY, COLOUR_BLACK);
-        }
-      }
-      draw = false;
-    }
-  }
 }
 
 button* buttons[] = { &button_left, &button_right, &button_down, &button_up };
@@ -1417,11 +1134,11 @@ void rsv_entry(char string[]) {
   uint8_t cursor = 0;
   uint8_t n = 3;
 
-  
+
   display->clear(COLOUR_BLACK);
 
   if (!settings.touch) {
-    draw_button_bar("<", ">", "+", "-");
+    sstv_menu.draw_button_bar(sstv_text_bar);
     display->drawString((DISPLAY_WIDTH - (18 * 12)) / 2, 90, font_16x12, "Select RSV (or 73)", COLOUR_YELLOW, COLOUR_BLACK);
     while (1) {
 
@@ -1463,7 +1180,6 @@ void rsv_entry(char string[]) {
     } while (value == '-');
     strcpy(string, rsv[(int)value]);
   }
-  
 }
 
 #define version 102

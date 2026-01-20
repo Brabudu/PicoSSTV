@@ -406,7 +406,7 @@ class c_sstv_encoder_pwm : public c_sstv_encoder {
       audio_buffer_index = 0;
       sample_max = scaled_sample;
       sample_min = scaled_sample;
-      if (button_right.is_pressed() || sstv_menu.poll_button_bar(sstv_bar) == 2) abort();
+      if (button_right.is_pressed() || sstv_menu.poll_button_bar(sstv_txx_bar, false) == 2) abort();
     } else {
       sample_max = max(sample_max, scaled_sample);
       sample_min = min(sample_min, scaled_sample);
@@ -557,6 +557,7 @@ void setup() {
   sync_menu();
 
 #ifdef WIFI
+  WiFi.mode(WIFI_STA);
   if (settings.wifi) connectToWiFi();
 #endif
 }
@@ -657,10 +658,6 @@ void loop() {
         draw = false;
       }
     }
-
-
-
-
 
 #ifdef WIFI
     if ((WiFi.status() == WL_CONNECTED) && (!connected)) {
@@ -1139,7 +1136,6 @@ void rsv_entry(char string[]) {
   uint8_t cursor = 0;
   uint8_t n = 3;
 
-
   display->clear(COLOUR_BLACK);
 
   if (!settings.touch) {
@@ -1254,6 +1250,11 @@ void create_thumbnail(const char* filename, e_mode mode) {
   bitmap.close();
 }
 
+void poll_news() {
+  #ifdef WIFI
+  poll_wifi_client();
+  #endif
+}
 /////////////////////////////////////////////////////////
 
 #ifdef WIFI
@@ -1351,7 +1352,7 @@ void sendGallery(WiFiClient& client, int page, const char* folder) {
   client.println("</body></html>");
 }
 
-void poll_wifi() {
+void poll_wifi_client() {
   static int page = 0;
   WiFiClient client = server.accept();
 
@@ -1396,8 +1397,10 @@ void poll_wifi() {
 }
 
 void connectToWiFi() {
+  digitalWrite(23, HIGH);  // Turn on WiFi chip power
+  delay(100);              // Wait for stabilization
   Serial.print("Connecting to WiFi");
-  WiFi.setTimeout(5000);
+  //WiFi.setTimeout(5000);
   WiFi.begin(ssid, password);
 }
 

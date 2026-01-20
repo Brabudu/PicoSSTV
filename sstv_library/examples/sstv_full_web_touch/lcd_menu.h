@@ -60,9 +60,9 @@ class lcd_menu {
 private:
   uint8_t page = 0;
 
-  bool get_touch(int &x, int &y);
+  bool get_touch(int &x, int &y, bool filtered);
   uint8_t get_touch_row();
-  uint8_t get_touch_button();
+  uint8_t get_touch_button(bool filtered);
 
   void draw_bar_item(bar_item bi);
   void draw_menu_item(uint8_t row, menu_item item, bool selected);
@@ -71,5 +71,6 @@ public:
   lcd_menu();
   void launch_menu(menu_list *root);
   void draw_button_bar(bar_menu b);
+  uint8_t poll_button_bar(bar_menu b, bool filtered);
   uint8_t poll_button_bar(bar_menu b);
 };

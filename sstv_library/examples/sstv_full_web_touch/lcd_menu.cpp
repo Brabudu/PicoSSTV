@@ -25,11 +25,13 @@
 
 #define BGCOLOR COLOUR_BLUE
 
-
+#define POLL_MS 5 //min ms to wait when polling touchscreen
 
 extern Stream* s;
 extern XPT2046_Bitbang touchscreen;
 extern ILI934X* display;
+
+extern void poll_news();
 
 bar_item menu_bar_items[] = {
   BAR_ITEM(0, "Exit", true),
@@ -60,6 +62,9 @@ void lcd_menu ::launch_menu(menu_list* root) {
 
   while (!exit) {
 
+
+    
+
     if (redraw) {
       display->fillRect(0, 0, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT, DISPLAY_WIDTH, COLOUR_LIGHTGREY);
       uint16_t width = strlen(root->title) * 12;
@@ -88,6 +93,7 @@ void lcd_menu ::launch_menu(menu_list* root) {
     uint8_t selection = 0;
     do {
       selection = get_touch_row();
+      poll_news();
     } while (selection == 0 || (selection > items && selection != 8));
 
     if (selection != 8) {
@@ -118,7 +124,7 @@ void lcd_menu ::launch_menu(menu_list* root) {
     } else {  //menu bar
       uint8_t pos;
       do {
-        pos = get_touch_button();
+        pos = get_touch_button(true);
       } while (pos == 0);
       if (menu_bar.items[pos - 1].active) {
 
@@ -173,13 +179,17 @@ void lcd_menu ::draw_button_bar(bar_menu b) {
 }
 
 uint8_t lcd_menu::poll_button_bar(bar_menu b) {
+  return poll_button_bar(b, true);
+}
+
+uint8_t lcd_menu::poll_button_bar(bar_menu b, bool filtered) {
   static uint32_t last_update_time = millis();
 
-  if ((millis() - last_update_time) < 5) return 0;
+  if ((millis() - last_update_time) < POLL_MS) return 0;
 
   last_update_time = millis();
 
-  uint8_t pos = get_touch_button();
+  uint8_t pos = get_touch_button(filtered);
   if (pos == 0) return 0;
 
   if (b.items[pos - 1].active) flash_button_bar_item(b, pos - 1, 100);
@@ -221,7 +231,7 @@ uint8_t lcd_menu::get_touch_row() {
 
   int x, y;
 
-  if (get_touch(x, y) && y > MARGIN_TOP) {
+  if (get_touch(x, y,true) && y > MARGIN_TOP) {
 
     uint8_t row = (y - MARGIN_TOP) / HEIGHT;
 
@@ -237,11 +247,11 @@ uint8_t lcd_menu::get_touch_row() {
   return 0;
 }
 
-uint8_t lcd_menu::get_touch_button() {
+uint8_t lcd_menu::get_touch_button(bool filtered) {
   static uint8_t last_touch = 0;
   int x, y;
 
-  if (get_touch(x, y)) {
+  if (get_touch(x, y, filtered)) {
     uint8_t pos = x / 80;  //320 / 4
 
     if (y > DISPLAY_HEIGHT - STATUS_BAR_HEIGHT) {
@@ -257,7 +267,7 @@ uint8_t lcd_menu::get_touch_button() {
   return 0;
 }
 
-bool lcd_menu::get_touch(int& x, int& y) {
+bool lcd_menu::get_touch(int& x, int& y, bool filtered) {
   // Retrieve a point
   static int mX = 0;
   static int mY = 0;
@@ -288,7 +298,7 @@ bool lcd_menu::get_touch(int& x, int& y) {
 
   //display->drawCircle(mX, mY, 2, COLOUR_RED);
 
-  if (count < 3) return false;
+  if (count < 3 && filtered) return false;
   //display->drawCircle(mX, mY, 2, COLOUR_GREEN);
   count = 0;
   return true;

@@ -19,8 +19,10 @@ struct s_settings {
   uint8_t color1;
   uint8_t color2;
   uint8_t color3;
+  uint8_t tx_preamble;
 
   char overlay_text[25];
+  char tx_callsign[25];
 };
 
 extern s_settings settings;
@@ -30,10 +32,30 @@ bool tx_mode(menu_item m) {
   return true;
 }
 
+bool tx_preamble(menu_item m) {
+  settings.tx_preamble = m.id;
+  return false;
+}
+
 bool autoslant(menu_item m) {
   settings.auto_slant_correction = m.state;
   return false;
 }
+
+bool ov_top_bar(menu_item m) {
+  settings.overlay = m.state;
+  return false;
+}
+
+/////////////////////
+
+extern void text_entry(char string[], uint8_t n);
+
+bool tx_callsign(menu_item m) {
+  text_entry(settings.tx_callsign, 10);
+  return true;
+}
+
 
 /////////////////////
 
@@ -137,12 +159,14 @@ menu_item settings_items[] = {
   MENU_ITEM(2, "Transmit mode", false, NULL, &tx_mode_menu),
   MENU_ITEM(3, "Min save %", false, NULL, &im_save_menu),
   MENU_ITEM(4, "Lost sig. timeout", false, NULL, &ls_timeout_menu),
-  MENU_ITEM(5, "Slideshow timeout", false, NULL, &sl_timeout_menu)
-
+  MENU_ITEM(5, "Slideshow timeout", false, NULL, &sl_timeout_menu),
+  MENU_ITEM(6, "Tx preamble", true, &tx_preamble, NULL),
+  MENU_ITEM(7, "Top bar overlay", true, &ov_top_bar,NULL),
+  MENU_ITEM(8, "Set callsign", false, &tx_callsign,NULL)
 
 };
 
-menu_list settings_menu = MENU_LIST(0, "Settings", 6, false, settings_items);
+menu_list settings_menu = MENU_LIST(0, "Settings", 9, false, settings_items);
 
 /////////////////////////////////////////////
 
@@ -181,6 +205,8 @@ menu_list main_menu = MENU_LIST(0, "Main Menu", 3, false, main_items);
 void sync_menu() {
   settings_items[0].state = settings.wifi;
   settings_items[1].state = settings.auto_slant_correction;
+  settings_items[6].state = settings.tx_preamble;
+  settings_items[7].state = settings.overlay;
   tx_mode_items[settings.transmit_mode].state = true;
   im_save_items[settings.min_completion].state = true;
   sl_timeout_items[settings.slideshow_timeout].state = true;

@@ -80,7 +80,7 @@ bool connected = false;
 //CONFIGURATION SECTION
 ///////////////////////////////////////////////////////////////////////////////
 
-#define CALLSIGN "IS0JSV\0";
+#define CALLSIGN "IS0JSV\0"
 
 const char* ssid = "Undixedda noa";
 const char* password = "Miagolina25!";
@@ -191,7 +191,7 @@ c_frame_buffer overlay(overlay_buffer, overlay_width, overlay_height);
 
 uint16_t scaled_image[214 * 160];
 
-char txcallsign_text[10] = CALLSIGN char rxcallsign_text[10];
+char rxcallsign_text[10];
 char rsv_text[4];
 
 s_settings settings = {
@@ -210,7 +210,9 @@ s_settings settings = {
   8,  //orange
   8,  //orange
   2,  //red
-  { 0 }
+  1,  // tx preamble
+  { 0 },  //overlay
+   { CALLSIGN }
 };
 
 //c_sstv_decoder provides a reusable SSTV decoder
@@ -428,7 +430,7 @@ class c_sstv_encoder_pwm : public c_sstv_encoder {
     //overlay a text banner
     uint16_t overlay_y = (uint32_t)y * overlay_width / width;
     uint16_t overlay_x = (uint32_t)x * overlay_width / width;
-    if (settings.overlay && overlay_y < overlay_height) {
+    if (overlay_y < overlay_height) {
       pixel = overlay_buffer[(overlay_y * overlay_width) + overlay_x];
       pixel = (pixel >> 8) | (pixel << 8);
       if (pixel == CHROMA) pixel = row[image_x];
@@ -801,7 +803,7 @@ void transmit_image(const char* filename) {
   c_sstv_encoder_pwm sstv_encoder(sample_rate_Hz);
   sstv_encoder.open(filename);
   digitalWrite(LED_BUILTIN, 1);
-  sstv_encoder.generate_sstv((e_sstv_tx_mode)settings.transmit_mode, true);
+  sstv_encoder.generate_sstv((e_sstv_tx_mode)settings.transmit_mode, settings.tx_preamble);
   digitalWrite(LED_BUILTIN, 0);
   sstv_encoder.close();
   display->clear(COLOUR_NAVY);
@@ -929,11 +931,11 @@ void tx_file_browser() {
     if (redraw) {
       get_bitmap_index(root, bitmap_index);
       filename = "/tx/" + root.fileName();
-
-      draw_overlay(txcallsign_text, rxcallsign_text, rsv_text);
-      set_overlay(settings.overlay_text);
-      display_image(filename.c_str(), settings.overlay);
-      //draw_banner(filename.c_str(), settings.overlay?30:0);
+      overlay.clear(0);
+      draw_overlay(settings.tx_callsign, rxcallsign_text, rsv_text);
+      if (settings.overlay) set_overlay(settings.overlay_text);
+      display_image(filename.c_str(), true);
+     
       draw_banner(rx_modes[convert_mode((e_sstv_tx_mode)settings.transmit_mode)]);
       sstv_menu.draw_button_bar(sstv_tx_bar);
       redraw = false;
@@ -1183,7 +1185,7 @@ void rsv_entry(char string[]) {
   }
 }
 
-#define version 102
+#define version 104
 
 void save() {
   EEPROM.put(2, settings);

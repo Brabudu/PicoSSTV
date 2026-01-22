@@ -206,13 +206,13 @@ s_settings settings = {
 #else
   0,
 #endif
-  0,  //wifi off
-  8,  //orange
-  8,  //orange
-  2,  //red
-  1,  // tx preamble
+  0,      //wifi off
+  8,      //orange
+  8,      //orange
+  2,      //red
+  1,      // tx preamble
   { 0 },  //overlay
-   { CALLSIGN }
+  { CALLSIGN }
 };
 
 //c_sstv_decoder provides a reusable SSTV decoder
@@ -628,6 +628,7 @@ void loop() {
           draw = true;
         }
       } else if ((button_right.is_pressed() || touch_button == 2) && (view_mode != slideshow_mode)) {
+        // Replying to a call
         touch_button = 0;
         text_entry(rxcallsign_text, 10);
         rsv_entry(rsv_text);
@@ -637,7 +638,7 @@ void loop() {
         overlay.draw_rect(19, 129, 108, 82, COLOUR_WHITE);
         settings.transmit_mode = convert_mode(sstv_decoder.getLastMode());
         delay(500);
-        tx_file_browser();
+        tx_file_browser(true);
         draw = true;
       }
     }
@@ -699,7 +700,7 @@ void draw_splash_screen() {
 }
 
 void draw_blank_screen() {
-  
+
   display->clear(COLOUR_NAVY);
   display->drawString((DISPLAY_WIDTH - (12 * strlen("Pico SSTV"))) / 2, 100, font_16x12, "Pico SSTV", COLOUR_GREY, COLOUR_NAVY);
 #ifdef WIFI
@@ -806,8 +807,7 @@ void transmit_image(const char* filename) {
   sstv_encoder.generate_sstv((e_sstv_tx_mode)settings.transmit_mode, settings.tx_preamble);
   digitalWrite(LED_BUILTIN, 0);
   sstv_encoder.close();
-  display->clear(COLOUR_NAVY);
-  display->drawString((DISPLAY_WIDTH - (12 * strlen("Pico SSTV"))) / 2, 100, font_16x12, "Pico SSTV", COLOUR_GREY, COLOUR_NAVY);
+  draw_blank_screen();
 }
 
 e_sstv_tx_mode convert_mode(e_mode rx_mode) {
@@ -880,7 +880,7 @@ e_mode convert_mode(e_sstv_tx_mode tx_mode) {
   }
 }
 
-void tx_file_browser() {
+void tx_file_browser(bool reply) {
   bool redraw = true;
   Dir root = SDFS.openDir("/tx/");
   const uint16_t num_bitmaps = count_bitmaps(root);
@@ -894,14 +894,14 @@ void tx_file_browser() {
 
   while (1) {
 
-    //touch_row = sstv_menu.get_touch_row();
+    touch_row = sstv_menu.get_touch_row();
 
-    //if (touch_row == 8) {
-    touch_button = sstv_menu.poll_button_bar(sstv_tx_bar);  //Menu bar
-                                                            // } else {
-    //  touch_button = 0;
-    // }
-    /*
+    if (touch_row == 8) {
+    touch_button = sstv_menu.poll_button_bar(sstv_tx_bar, false);  //Menu bar
+                                                             } else {
+      touch_button = 0;
+     }
+    
     if (touch_row == 1 || touch_row == 2 || touch_row == 6 || touch_row == 7) {
       t_keyboard.make_color_kb();
       delay(500);
@@ -916,7 +916,6 @@ void tx_file_browser() {
       save();
       redraw = true;
     }
-*/
 
     if (button_up.is_pressed() || touch_button == 4) {
       if (bitmap_index == num_bitmaps - 1) bitmap_index = 0;
@@ -931,11 +930,17 @@ void tx_file_browser() {
     if (redraw) {
       get_bitmap_index(root, bitmap_index);
       filename = "/tx/" + root.fileName();
-      overlay.clear(0);
-      draw_overlay(settings.tx_callsign, rxcallsign_text, rsv_text);
+
+      if (reply) {
+        draw_overlay(settings.tx_callsign, rxcallsign_text, rsv_text);
+      } else {
+        overlay.clear(0);
+        draw_overlay(settings.tx_callsign, "CQ CQ", "");
+      }
+
       if (settings.overlay) set_overlay(settings.overlay_text);
       display_image(filename.c_str(), true);
-     
+
       draw_banner(rx_modes[convert_mode((e_sstv_tx_mode)settings.transmit_mode)]);
       sstv_menu.draw_button_bar(sstv_tx_bar);
       redraw = false;
@@ -1003,10 +1008,9 @@ void draw_outlined(uint16_t x, uint16_t y, String msg, uint16_t fg, uint16_t bg)
 
 
 void draw_overlay(String callsignSender, String callsignReceiver, String msg) {
-  if (callsignReceiver == "") callsignReceiver = "CQ CQ";
   draw_outlined(20, 60, callsignReceiver, palette[settings.color1], COLOUR_WHITE);
   draw_outlined(40, 110, msg, palette[settings.color2], COLOUR_WHITE);
-  draw_outlined(300 - callsignSender.length() * 28, 220, callsignSender, palette[settings.color3], COLOUR_WHITE);
+  draw_outlined(300 - callsignSender.length() * 29, 220, callsignSender, palette[settings.color3], COLOUR_WHITE);
 }
 
 button* buttons[] = { &button_left, &button_right, &button_down, &button_up };
@@ -1253,9 +1257,9 @@ void create_thumbnail(const char* filename, e_mode mode) {
 }
 
 void poll_news() {
-  #ifdef WIFI
+#ifdef WIFI
   poll_wifi_client();
-  #endif
+#endif
 }
 /////////////////////////////////////////////////////////
 

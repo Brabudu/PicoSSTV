@@ -61,7 +61,7 @@ private:
   uint8_t page = 0;
 
   bool get_touch(int &x, int &y, bool filtered);
-  uint8_t get_touch_row();
+  
   uint8_t get_touch_button(bool filtered);
 
   void draw_bar_item(bar_item bi);
@@ -73,4 +73,5 @@ public:
   void draw_button_bar(bar_menu b);
   uint8_t poll_button_bar(bar_menu b, bool filtered);
   uint8_t poll_button_bar(bar_menu b);
+  uint8_t get_touch_row();
 };

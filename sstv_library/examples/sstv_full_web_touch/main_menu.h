@@ -181,10 +181,10 @@ bool im_slideshow(menu_item m) {
 }
 
 /////////////////////////////////////////////
-extern void tx_file_browser();
+extern void tx_file_browser(bool reply);
 
 bool tx_file(menu_item m) {
-  tx_file_browser();
+  tx_file_browser(false);
   return true;
 }
 

@@ -49,10 +49,10 @@ bool ov_top_bar(menu_item m) {
 
 /////////////////////
 
-extern void text_entry(char string[], uint8_t n);
+extern void text_entry(char string[], uint8_t n, const char* title);
 
 bool tx_callsign(menu_item m) {
-  text_entry(settings.tx_callsign, 10);
+  text_entry(settings.tx_callsign, 10,"Enter your callsign");
   return true;
 }
 

@@ -150,7 +150,7 @@ char touch_keyboard ::get_key_press() {
       break;
     case mode_rsv:
       {
-        for (int i = 0; i < 7; i++) {
+        for (int i = 0; i < 9; i++) {
           if (touch_button(60 + 70 * (i % 3), MARGIN_TOP + 35 * (i / 3), 50, 25, X, Y)) return i;
         }
       }

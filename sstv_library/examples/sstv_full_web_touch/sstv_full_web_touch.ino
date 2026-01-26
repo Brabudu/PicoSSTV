@@ -1193,7 +1193,7 @@ void rsv_entry(char string[]) {
       "txt",
       ""
     };
-    display->drawString(70, 220, font_16x12, "Enter RSV, 73 or text", COLOUR_YELLOW, COLOUR_BLACK);
+    display->drawString(50, 220, font_16x12, "Enter RSV, 73 or text", COLOUR_YELLOW, COLOUR_BLACK);
 
     t_keyboard.make_rsv_kb(rsv, 8);
     do {

@@ -1323,9 +1323,12 @@ void rsv_entry(char string[]) {
     client.println("Content-Type: text/html");
     client.println();
     client.println("<!DOCTYPE html><html><head><meta charset='UTF-8'>");
-    client.println("<title>Galleria SD</title>");
+    client.print("<title>");
+    client.print(settings.tx_callsign);
+    client.println(" SSTV gallery</title>");
+    client.println("<meta name='viewport' content='width=device-width, initial-scale=1.0'>");
     client.println("<style>body{background: antiquewhite;}.foto{float:left;border:1px lightgray solid;padding: 5px;margin:10px;border-radius: 10px;background:white;height:322px;}img{margin:20px;width:320px;border:2px black solid}</style></head>");
-    client.println("<body><h1>Galleria immagini su SD</h1><hr><h2>Pagina ");
+    client.println("<body><h1>Image gallery</h1><hr><h2>Page ");
     client.print(page);
     client.print("</h2><h2> Folder ");
     client.print(folder);

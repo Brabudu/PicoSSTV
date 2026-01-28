@@ -1,11 +1,11 @@
+// Copyright (c) Francesco Capuzzi 2025 IS0JSV
+// MIT License
+
 #include "touch_keyboard.h"
 #include "XPT2046_Bitbang.h"
 #include "ili934x.h"
 #include "font_16x12.h"
 #include <Arduino.h>
-
-// Copyright (c) Francesco Capuzzi 2025
-// This is calibration data for the raw touch data to the screen coordinates
 
 #define IsWithin(x, a, b) ((x >= a) && (x <= b))
 #define TS_MINX 10

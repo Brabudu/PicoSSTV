@@ -1,3 +1,7 @@
+// Copyright (c) Francesco Capuzzi 2025 IS0JSV
+// MIT License
+
+
 #include <stdbool.h>
 #include <stdint.h>
 

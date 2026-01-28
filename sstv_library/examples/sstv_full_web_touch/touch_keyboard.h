@@ -1,4 +1,5 @@
 // Copyright (c) Francesco Capuzzi 2025 IS0JSV
+//Thanks to Adafruit forums member Asteroid and Andrew Mascolo Jr for the original sketch!
 // MIT License
 
 #include <Arduino.h>

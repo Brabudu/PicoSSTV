@@ -16,6 +16,8 @@ struct bar_menu;
 struct bar_item;
 
 /* Function pointer */
+// Returns true to exit the menu 
+
 typedef bool (*GeneralMenuFunction)(menu_item);
 
 typedef struct menu_list {

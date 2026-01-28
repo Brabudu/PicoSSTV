@@ -33,7 +33,7 @@ extern Stream* s;
 extern XPT2046_Bitbang touchscreen;
 extern ILI934X* display;
 
-extern void poll_news();
+extern void poll_news();    //The function is called periodically during menu execution
 
 bar_item menu_bar_items[] = {
   BAR_ITEM(0, "Exit", true),
@@ -45,10 +45,6 @@ bar_item menu_bar_items[] = {
 bar_menu menu_bar = { 4, menu_bar_items };
 
 /////////////////////////////////
-
-
-
-///////////////////////////
 
 lcd_menu ::lcd_menu() {
   touchscreen.setCalibration(100, 3900, 100, 3900);
@@ -63,9 +59,6 @@ void lcd_menu ::launch_menu(menu_list* root) {
   bool exit = false;
 
   while (!exit) {
-
-
-    
 
     if (redraw) {
       display->fillRect(0, 0, DISPLAY_HEIGHT - STATUS_BAR_HEIGHT, DISPLAY_WIDTH, COLOUR_LIGHTGREY);
@@ -115,7 +108,6 @@ void lcd_menu ::launch_menu(menu_list* root) {
         root->items[actual->id].state = true;
         
       }
-
 
       draw_menu_item(selection - 1, *actual, false);
 

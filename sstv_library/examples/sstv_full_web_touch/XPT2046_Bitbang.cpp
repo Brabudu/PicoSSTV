@@ -1,6 +1,5 @@
 #include "XPT2046_Bitbang.h"
 
-
 XPT2046_Bitbang::XPT2046_Bitbang(uint8_t mosiPin, uint8_t misoPin, uint8_t clkPin, uint8_t csPin, uint16_t screenWidth, uint16_t screenHeight)
   : _mosiPin(mosiPin), _misoPin(misoPin), _clkPin(clkPin), _csPin(csPin), _screenWidth(screenWidth), _screenHeight(screenHeight) {
   cal = TouchCalibration{ 0, 4095, 0, 4095 };
@@ -12,7 +11,6 @@ void XPT2046_Bitbang::setCalibration(uint16_t xMin, uint16_t xMax, uint16_t yMin
   cal.xMax = xMax;
   cal.yMax = yMax;
 }
-
 
 void XPT2046_Bitbang::begin() {
   pinMode(_mosiPin, OUTPUT);

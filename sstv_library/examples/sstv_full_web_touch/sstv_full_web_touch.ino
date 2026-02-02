@@ -583,7 +583,7 @@ void loop() {
   draw_blank_screen();
   strncpy(settings.overlay_text, "Pi Pico SSTV", 24);
   load();
-
+  bool img_received=false; //Last image
 
   while (1) {
 
@@ -603,6 +603,7 @@ void loop() {
         SDFS.rename("temp", rx_filename);
         create_thumbnail(rx_filename, sstv_decoder.getLastMode());
         get_new_filename(rx_filename, 100);
+        img_received=true;
       }
       sstv_decoder.open("temp");
       draw = true;
@@ -634,9 +635,11 @@ void loop() {
         rsv_entry(rsv_text);
 
         overlay.clear(0);
-        overlay.draw_image(20, 130, 106, 80, scaled_image);
-        overlay.draw_rect(19, 129, 108, 82, COLOUR_WHITE);
-        settings.transmit_mode = convert_mode(sstv_decoder.getLastMode());
+        if (img_received) {
+          overlay.draw_image(20, 130, 106, 80, scaled_image);
+          overlay.draw_rect(19, 129, 108, 82, COLOUR_WHITE);
+          settings.transmit_mode = convert_mode(sstv_decoder.getLastMode());
+        }
         delay(500);
         tx_file_browser(true);
         draw = true;
@@ -1389,7 +1392,7 @@ void sendGallery(WiFiClient& client, int page, bool tx) {
   }
   client.print("</div><hr>");
 
-  for (int i = 0; i <= num / 4; i++) {
+  for (int i = 0; i <= (num-1) / 4; i++) {
     if (tx) client.println("<a href='?tx=");
     else client.println("<a href='?page=");
     client.print(i);

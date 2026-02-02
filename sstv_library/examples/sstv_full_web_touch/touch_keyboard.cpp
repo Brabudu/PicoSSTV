@@ -109,8 +109,8 @@ char touch_keyboard ::get_key_press() {
 
   //Map touch for calibration
 
-  X = map(mX, TS_MINX, TS_MAXX, 0, 320);
-  Y = map(mY, TS_MINY, TS_MAXY, 0, 200);
+  //X = map(mX, TS_MINX, TS_MAXX, 0, 320);
+  //Y = map(mY, TS_MINY, TS_MAXY, 0, 200);
 
   //display->drawCircle(X,Y,3,COLOUR_WHITE); //For calibration purpose
 

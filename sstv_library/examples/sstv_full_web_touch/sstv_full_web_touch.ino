@@ -583,7 +583,7 @@ void loop() {
   draw_blank_screen();
   strncpy(settings.overlay_text, "Pi Pico SSTV", 24);
   load();
-  bool img_received=false; //Last image
+  bool img_received = false;  //Last image
 
   while (1) {
 
@@ -603,7 +603,7 @@ void loop() {
         SDFS.rename("temp", rx_filename);
         create_thumbnail(rx_filename, sstv_decoder.getLastMode());
         get_new_filename(rx_filename, 100);
-        img_received=true;
+        img_received = true;
       }
       sstv_decoder.open("temp");
       draw = true;
@@ -1315,8 +1315,10 @@ void sendImage(WiFiClient& client, String filename) {
   }
   fclose(file);
 }
-void send404(WiFiClient& client) {
-  client.println("HTTP/1.0 404 Not found");
+void sendError(WiFiClient& client, uint16_t error) {
+  client.print("HTTP/1.0 ");
+  client.print(error);
+  client.println(" Error");
   client.println();
 }
 
@@ -1352,8 +1354,6 @@ void sendGallery(WiFiClient& client, int page, bool tx) {
     client.println("<br><a href='?tx=0'><button style='margin:5px;'>TX folder</button></a>");
   }
   client.println("<div style='display: inline flow-root list-item;'>");
-
-
 
   Dir root = SDFS.openDir(folder);
   int num = count_bitmaps(root);
@@ -1392,7 +1392,7 @@ void sendGallery(WiFiClient& client, int page, bool tx) {
   }
   client.print("</div><hr>");
 
-  for (int i = 0; i <= (num-1) / 4; i++) {
+  for (int i = 0; i <= (num - 1) / 4; i++) {
     if (tx) client.println("<a href='?tx=");
     else client.println("<a href='?page=");
     client.print(i);
@@ -1401,10 +1401,87 @@ void sendGallery(WiFiClient& client, int page, bool tx) {
     client.print("</button></a>");
   }
 
-
-
+  if (tx) {
+    client.println("<hr><form action='upload.php' method='post' enctype='multipart/form-data'>");
+    client.println("<input type='file' name='fileToUpload' id='fileToUploa'>");
+    client.println("<input type='submit' value='Upload Image' name='submit'></form>");
+  }
 
   client.println("</body></html>");
+}
+
+void getImage(WiFiClient& client) {
+
+  // Apri stream raw
+  String boundary;
+  String filename;
+
+  // 1️⃣ Leggi header HTTP e trova boundary
+  while (client.connected()) {
+    String line = client.readStringUntil('\n');
+    if (line.startsWith("Content-Type: multipart/form-data")) {
+      int b = line.indexOf("boundary=");
+      if (b > 0) {
+        boundary = "--" + line.substring(b + 9);
+        boundary.trim();
+      }
+    }
+    if (line == "\r") break;
+  }
+
+  if (boundary == "") {
+    sendError(client, 405);
+    return;
+  }
+
+  // 2️⃣ Leggi header multipart e trova filename
+  while (client.connected()) {
+    String line = client.readStringUntil('\n');
+
+    if (line.startsWith("Content-Disposition")) {
+      int f = line.indexOf("filename=\"");
+      if (f >= 0) {
+        filename = line.substring(f + 10);
+        filename = filename.substring(0, filename.indexOf("\""));
+      }
+    }
+
+    if (line == "\r") break;
+  }
+
+  if (filename == "") {
+    sendError(client, 500);
+    return;
+  }
+
+  String path = "/tx/" + filename;
+  FILE* file = fopen(path.c_str(), "wb");
+  if (!file) {
+    sendError(client, 501);
+    return;
+  }
+
+  // 3️⃣ Scrittura binaria fino al boundary finale
+  uint8_t buffer[512];
+  String tail = "\r\n" + boundary;
+  int tailLen = tail.length();
+
+  while (client.connected()) {
+    int len = client.read(buffer, sizeof(buffer));
+    if (len <= 0) break;
+
+    // Controlla boundary finale
+    String chunk = String((char*)buffer).substring(0, len);
+    int pos = chunk.indexOf(tail);
+    if (pos >= 0) {
+      fwrite(buffer, 1, pos, file);
+      break;
+    } else {
+      fwrite(buffer, 1, len, file);
+    }
+  }
+
+  fclose(file);
 }
 
 void poll_wifi_client() {
@@ -1415,6 +1492,13 @@ void poll_wifi_client() {
 
   String request = client.readStringUntil('\r');
   client.readStringUntil('\n');
+
+  if (request.startsWith("POST")) {
+    getImage(client);
+    sendGallery(client, 0, true);
+    return;
+  }
+
   request = request.substring(5, request.length() - 8);  //Remove "GET /" and "HTTP 1.1"
 
   if (request.startsWith("img/")) {
@@ -1433,7 +1517,7 @@ void poll_wifi_client() {
     page = request.substring(6).toInt();
     sendGallery(client, page, false);
   } else if (request.startsWith("favicon.ico")) {
-    send404(client);
+    sendError(client, 404);
   } else if (request.startsWith("?tx=")) {
     page = request.substring(4).toInt();
     sendGallery(client, page, true);

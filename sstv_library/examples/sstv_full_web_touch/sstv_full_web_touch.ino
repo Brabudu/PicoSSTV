@@ -1393,8 +1393,8 @@ void sendGallery(WiFiClient& client, int page, bool tx) {
   client.print("</div><hr>");
 
   for (int i = 0; i <= (num - 1) / 4; i++) {
-    if (tx) client.println("<a href='?tx=");
-    else client.println("<a href='?page=");
+    if (tx) client.println("<a href='/?tx=");
+    else client.println("<a href='/?page=");
     client.print(i);
     client.println("'><button style='margin:5px;'>Page ");
     client.print(i);

@@ -190,6 +190,7 @@ uint16_t overlay_buffer[overlay_width * overlay_height];
 c_frame_buffer overlay(overlay_buffer, overlay_width, overlay_height);
 
 uint16_t scaled_image[214 * 160];
+ bool first_img_received = false;  //Last image
 
 char rxcallsign_text[10];
 char rsv_text[20];
@@ -223,6 +224,7 @@ class c_sstv_decoder_fileio : public c_sstv_decoder {
   uint16_t tft_row_number = 0;
   float progress = 0;
   e_mode last_mode = martin_m1;
+ 
 
   const uint16_t display_width = DISPLAY_WIDTH;
   const uint16_t display_height = DISPLAY_HEIGHT - STATUS_BAR_HEIGHT;  //allow space for status bar
@@ -583,7 +585,7 @@ void loop() {
   draw_blank_screen();
   strncpy(settings.overlay_text, "Pi Pico SSTV", 24);
   load();
-  bool img_received = false;  //Last image
+  
 
   while (1) {
 
@@ -603,7 +605,7 @@ void loop() {
         SDFS.rename("temp", rx_filename);
         create_thumbnail(rx_filename, sstv_decoder.getLastMode());
         get_new_filename(rx_filename, 100);
-        img_received = true;
+      first_img_received = true;
       }
       sstv_decoder.open("temp");
       draw = true;
@@ -635,7 +637,7 @@ void loop() {
         rsv_entry(rsv_text);
 
         overlay.clear(0);
-        if (img_received) {
+        if (first_img_received) {
           overlay.draw_image(20, 130, 106, 80, scaled_image);
           overlay.draw_rect(19, 129, 108, 82, COLOUR_WHITE);
           settings.transmit_mode = convert_mode(sstv_decoder.getLastMode());

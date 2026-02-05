@@ -190,7 +190,7 @@ uint16_t overlay_buffer[overlay_width * overlay_height];
 c_frame_buffer overlay(overlay_buffer, overlay_width, overlay_height);
 
 uint16_t scaled_image[214 * 160];
- bool first_img_received = false;  //Last image
+bool first_img_received = false;  //Last image
 
 char rxcallsign_text[10];
 char rsv_text[20];
@@ -224,7 +224,7 @@ class c_sstv_decoder_fileio : public c_sstv_decoder {
   uint16_t tft_row_number = 0;
   float progress = 0;
   e_mode last_mode = martin_m1;
- 
+
 
   const uint16_t display_width = DISPLAY_WIDTH;
   const uint16_t display_height = DISPLAY_HEIGHT - STATUS_BAR_HEIGHT;  //allow space for status bar
@@ -585,7 +585,7 @@ void loop() {
   draw_blank_screen();
   strncpy(settings.overlay_text, "Pi Pico SSTV", 24);
   load();
-  
+
 
   while (1) {
 
@@ -605,7 +605,7 @@ void loop() {
         SDFS.rename("temp", rx_filename);
         create_thumbnail(rx_filename, sstv_decoder.getLastMode());
         get_new_filename(rx_filename, 100);
-      first_img_received = true;
+        first_img_received = true;
       }
       sstv_decoder.open("temp");
       draw = true;
@@ -736,28 +736,13 @@ void initialise_sdcard() {
   SDFSConfig c2;
   c2.setAutoFormat(true);
   SDFS.setConfig(c2);
-  // Ensure the SPI pinout the SD card is connected to is configured properly
-  // Select the correct SPI based on _MISO pin for the RP2040
-  if (SDCARD_MISO == 0 || SDCARD_MISO == 4 || SDCARD_MISO == 16) {
-    SPI.setRX(SDCARD_MISO);
-    SPI.setTX(SDCARD_MOSI);
-    SPI.setSCK(SDCARD_SCK);
-    SDFS.setConfig(SDFSConfig(SDCARD_CS, SPI_HALF_SPEED, SPI));
-    sdInitialized = SDFS.begin();
-  } else if (SDCARD_MISO == 8 || SDCARD_MISO == 12) {
-    SPI1.setRX(SDCARD_MISO);
-    SPI1.setTX(SDCARD_MOSI);
-    SPI1.setSCK(SDCARD_SCK);
-    SDFS.setConfig(SDFSConfig(SDCARD_CS, SPI_HALF_SPEED, SPI1));
-    sdInitialized = SDFS.begin();
-  } else {
-    Serial.println(F("ERROR: Unknown SPI Configuration"));
-    return;
-  }
-  if (!sdInitialized) {
-    Serial.println("initialization failed!");
-    return;
-  }
+
+  SPI.setRX(SDCARD_MISO);
+  SPI.setTX(SDCARD_MOSI);
+  SPI.setSCK(SDCARD_SCK);
+  SDFS.setConfig(SDFSConfig(SDCARD_CS, SD_SCK_MHZ(40), SPI));
+  sdInitialized = SDFS.begin();
+
   Serial.println("initialization done.");
 }
 

@@ -2,7 +2,7 @@
 // MIT License
 
 #include "lcd_menu.h"
-
+#include "wifi_server.h"
 
 static const uint16_t timeouts[] = { UINT16_MAX, 1, 2, 5, 10, 30, 60, 60 * 2, 60 * 5 };
 static const float completion[] = { 0.9, 0.75, 0.5 };
@@ -58,18 +58,16 @@ bool tx_callsign(menu_item m) {
   return true;
 }
 
-
 /////////////////////
 
-extern void reconnectWiFiAndClient();
-extern void disconnectWiFi();
+extern wifi_server wifi_s;
 
 bool wifi(menu_item m) {
   settings.wifi = m.state;
   if (settings.wifi) {
-    reconnectWiFiAndClient();
+    wifi_s.reconnectWiFiAndClient();
   } else {
-    disconnectWiFi();
+    wifi_s.disconnectWiFi();
   }
   return false;
 }

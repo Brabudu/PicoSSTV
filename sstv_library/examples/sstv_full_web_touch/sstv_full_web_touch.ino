@@ -68,23 +68,20 @@
 #endif
 
 #ifdef WIFI
-#include <WiFi.h>
-#include <WiFiServer.h>
 
-WiFiServer server(80);
+//Network configuration in file wifi.cpp !!!
 
-bool connected = false;
+#include "wifi_server.h"
+
+wifi_server wifi_s;
 
 #endif
 
-//CONFIGURATION SECTION
-///////////////////////////////////////////////////////////////////////////////
 
 #define CALLSIGN "IS0JSV\0"
 
-const char* ssid = "Undixedda noa";
-const char* password = "Miagolina25!";
-
+//HW CONFIGURATION SECTION
+///////////////////////////////////////////////////////////////////////////////
 
 #define PIN_MISO 12  //not used by TFT but part of SPI bus
 #define PIN_CS 13
@@ -172,6 +169,7 @@ ILI934X* display;
 XPT2046_Bitbang touchscreen(T_MOSI_PIN, T_MISO_PIN, T_CLK_PIN, T_CS_PIN);
 touch_keyboard t_keyboard;
 
+
 lcd_menu sstv_menu = lcd_menu();
 
 Stream* s;
@@ -224,7 +222,6 @@ class c_sstv_decoder_fileio : public c_sstv_decoder {
   uint16_t tft_row_number = 0;
   float progress = 0;
   e_mode last_mode = martin_m1;
-
 
   const uint16_t display_width = DISPLAY_WIDTH;
   const uint16_t display_height = DISPLAY_HEIGHT - STATUS_BAR_HEIGHT;  //allow space for status bar
@@ -562,7 +559,7 @@ void setup() {
 
 #ifdef WIFI
   WiFi.mode(WIFI_STA);
-  if (settings.wifi) connectToWiFi();
+  if (settings.wifi) wifi_s.connectToWiFi();
 #endif
 }
 
@@ -668,10 +665,8 @@ void loop() {
     }
 
 #ifdef WIFI
-    if ((WiFi.status() == WL_CONNECTED) && (!connected)) {
-      server.begin();
-      connected = true;
-    }
+    
+    wifi_s.connect();
 #endif
   }
   sstv_decoder.stop();
@@ -1267,286 +1262,6 @@ void create_thumbnail(const char* filename, e_mode mode) {
 
 void poll_news() {
 #ifdef WIFI
-  poll_wifi_client();
+  wifi_s.poll_wifi_client();
 #endif
 }
-/////////////////////////////////////////////////////////
-
-#ifdef WIFI
-
-bool isImage(String name) {
-  name.toLowerCase();
-  return name.endsWith(".bmp");
-}
-
-
-void sendImage(WiFiClient& client, String filename) {
-  FILE* file = fopen(filename.c_str(), "rb");
-  if (file == NULL) {
-    client.println("HTTP/1.1 404 Not Found\r\n");
-    client.println("Content-Type: text/plain\r\n\r\nFile not found");
-    return;
-  }
-
-  String contentType = "application/octet-stream";
-  contentType = "image/bmp";
-
-  client.println("HTTP/1.0 200 OK");
-  client.println("Content-Type: " + contentType);
-  client.println("Connection: close");
-  client.println();
-  int n;
-  uint8_t buffer[1024];
-  while ((n = fread(buffer, 1, sizeof(buffer) - 1, file)) > 0) {
-    client.write(buffer, n);
-  }
-  fclose(file);
-}
-void sendError(WiFiClient& client, uint16_t error) {
-  client.print("HTTP/1.0 ");
-  client.print(error);
-  client.println(" Error");
-  client.println();
-}
-
-void sendGallery(WiFiClient& client, int page, bool tx) {
-
-  const char* folder;
-  if (tx) folder = "/tx";
-  else folder = "/";
-
-  client.println("HTTP/1.0 200 OK");
-  client.println("Connection: close");
-  client.println("Content-Type: text/html");
-  client.println();
-  client.println("<!DOCTYPE html><html><head><meta charset='UTF-8'>");
-  client.print("<title>");
-  client.print(settings.tx_callsign);
-  if (tx) client.print(" TX");
-  client.println(" SSTV gallery</title>");
-  client.println("<meta name='viewport' content='width=device-width, initial-scale=1.0'>");
-  client.println("<style>body{background: antiquewhite;}.foto{float:left;border:1px lightgray solid;padding: 5px;margin:10px;border-radius: 10px;background:white;height:322px;}img{margin:20px;width:320px;border:2px black solid}</style></head>");
-  client.println("<body><h1>");
-  if (tx) client.print("TX ");
-  else client.print("RX ");
-  client.print("Image gallery</h1><hr><h2>Page ");
-  client.print(page);
-  client.print("</h2><h2> Folder ");
-  client.print(folder);
-  client.println("</h2>");
-
-  if (tx) {
-    client.println("<br><a href='/'><button style='margin:5px;'>RX folder</button></a>");
-  } else {
-    client.println("<br><a href='?tx=0'><button style='margin:5px;'>TX folder</button></a>");
-  }
-  client.println("<div style='display: inline flow-root list-item;'>");
-
-  Dir root = SDFS.openDir(folder);
-  int num = count_bitmaps(root);
-  root.rewind();
-  int n = 0;
-  int disp = 0;
-
-  while ((root.next()) && (disp < 4)) {
-    String name = root.fileName();
-    ;
-    if (isImage(name)) {
-      if (n >= page * 4) {
-        client.print("<div class='foto'>");
-        client.print("<a href=?del=");
-        client.print(folder);
-        client.print("/");
-        client.print(name);
-        client.print("><button style='width:100%'>Delete ");
-        client.print(name);
-        client.print("</button></a></br>");
-        client.print("<a href='img");
-        client.print(folder);
-        client.print("/");
-        client.print(name);
-        client.print("'><img src='img");
-        client.print(folder);
-        client.print("/");
-        client.print(name);
-        client.print("' /></a>");
-
-        client.print("</div>");
-        disp++;
-      }
-      n++;
-    }
-  }
-  client.print("</div><hr>");
-
-  for (int i = 0; i <= (num - 1) / 4; i++) {
-    if (tx) client.println("<a href='/?tx=");
-    else client.println("<a href='/?page=");
-    client.print(i);
-    client.println("'><button style='margin:5px;'>Page ");
-    client.print(i);
-    client.print("</button></a>");
-  }
-
-  if (tx) {
-    client.println("<hr><form action='upload.php' method='post' enctype='multipart/form-data'>");
-    client.println("<input type='file' name='fileToUpload' id='fileToUploa'>");
-    client.println("<input type='submit' value='Upload Image' name='submit'></form>");
-  }
-
-  client.println("</body></html>");
-}
-
-void getImage(WiFiClient& client) {
-
-  // Apri stream raw
-  String boundary;
-  String filename;
-
-  // 1️⃣ Leggi header HTTP e trova boundary
-  while (client.connected()) {
-    String line = client.readStringUntil('\n');
-    if (line.startsWith("Content-Type: multipart/form-data")) {
-      int b = line.indexOf("boundary=");
-      if (b > 0) {
-        boundary = "--" + line.substring(b + 9);
-        boundary.trim();
-      }
-    }
-    if (line == "\r") break;
-  }
-
-  if (boundary == "") {
-    sendError(client, 405);
-    return;
-  }
-
-  // 2️⃣ Leggi header multipart e trova filename
-  while (client.connected()) {
-    String line = client.readStringUntil('\n');
-
-    if (line.startsWith("Content-Disposition")) {
-      int f = line.indexOf("filename=\"");
-      if (f >= 0) {
-        filename = line.substring(f + 10);
-        filename = filename.substring(0, filename.indexOf("\""));
-      }
-    }
-
-    if (line == "\r") break;
-  }
-
-  if (filename == "") {
-    sendError(client, 500);
-    return;
-  }
-
-  String path = "/tx/" + filename;
-  FILE* file = fopen(path.c_str(), "wb");
-  if (!file) {
-    sendError(client, 501);
-    return;
-  }
-
-  // 3️⃣ Scrittura binaria fino al boundary finale
-  uint8_t buffer[512];
-  String tail = "\r\n" + boundary;
-  int tailLen = tail.length();
-
-  while (client.connected()) {
-    int len = client.read(buffer, sizeof(buffer));
-    if (len <= 0) break;
-
-    // Controlla boundary finale
-    String chunk = String((char*)buffer).substring(0, len);
-    int pos = chunk.indexOf(tail);
-    if (pos >= 0) {
-      fwrite(buffer, 1, pos, file);
-      break;
-    } else {
-      fwrite(buffer, 1, len, file);
-    }
-  }
-
-  fclose(file);
-}
-
-void poll_wifi_client() {
-  static int page = 0;
-  WiFiClient client = server.accept();
-
-  if (!client) return;
-
-  String request = client.readStringUntil('\r');
-  client.readStringUntil('\n');
-
-  if (request.startsWith("POST")) {
-    getImage(client);
-    sendGallery(client, 0, true);
-    return;
-  }
-
-  request = request.substring(5, request.length() - 8);  //Remove "GET /" and "HTTP 1.1"
-
-  if (request.startsWith("img/")) {
-    int pos = request.indexOf('/');
-    String filename = request.substring(4);
-    filename.trim();
-    Serial.println(filename);
-    sendImage(client, filename);
-  } else if (request.startsWith("?del=")) {
-    String filename = request.substring(5);
-    Serial.print("deleting ");
-    Serial.println(filename);
-    SDFS.remove(filename);
-    sendGallery(client, page, false);
-  } else if (request.startsWith("?page=")) {
-    page = request.substring(6).toInt();
-    sendGallery(client, page, false);
-  } else if (request.startsWith("favicon.ico")) {
-    sendError(client, 404);
-  } else if (request.startsWith("?tx=")) {
-    page = request.substring(4).toInt();
-    sendGallery(client, page, true);
-  } else {
-    sendGallery(client, page, false);
-  }
-
-  delay(1);
-  client.flush();
-
-  while (client.available()) {
-    client.read();
-  }
-  delay(100);
-  client.stop();
-}
-
-void connectToWiFi() {
-  digitalWrite(23, HIGH);  // Turn on WiFi chip power
-  delay(100);              // Wait for stabilization
-  Serial.print("Connecting to WiFi");
-  //WiFi.setTimeout(5000);
-  WiFi.begin(ssid, password);
-}
-
-// Function to disconnect WiFi and turn off WiFi chip power
-void disconnectWiFi() {
-  Serial.println("Disconnecting WiFi...");
-  WiFi.disconnect();      // Disconnect WiFi
-  delay(100);             // Wait a bit
-  WiFi.mode(WIFI_OFF);    // Turn off WiFi mode
-  delay(100);             // Wait a bit
-  digitalWrite(23, LOW);  // Turn off WiFi chip power
-  Serial.println("WiFi disconnected and power to WiFi chip is off.");
-}
-
-// Function to reconnect WiFi and WiFiClient
-void reconnectWiFiAndClient() {
-  digitalWrite(23, HIGH);  // Turn on WiFi chip power
-  delay(100);              // Wait for stabilization
-  Serial.println("Reconnecting WiFi...");
-  WiFi.mode(WIFI_STA);  // Set WiFi mode to STA
-  connectToWiFi();
-}  // Reconnect to WiFi
-#endif

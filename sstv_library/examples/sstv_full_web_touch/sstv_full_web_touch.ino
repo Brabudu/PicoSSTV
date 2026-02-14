@@ -735,7 +735,7 @@ void initialise_sdcard() {
   SPI.setRX(SDCARD_MISO);
   SPI.setTX(SDCARD_MOSI);
   SPI.setSCK(SDCARD_SCK);
-  SDFS.setConfig(SDFSConfig(SDCARD_CS, SD_SCK_MHZ(40), SPI));
+  SDFS.setConfig(SDFSConfig(SDCARD_CS, SD_SCK_MHZ(20), SPI));
   sdInitialized = SDFS.begin();
 
   Serial.println("initialization done.");

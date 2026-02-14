@@ -665,7 +665,7 @@ void loop() {
     }
 
 #ifdef WIFI
-    
+
     wifi_s.connect();
 #endif
   }
@@ -876,6 +876,7 @@ void tx_file_browser(bool reply) {
 
   uint8_t touch_row;
 
+  bool edit = false;
 
   while (1) {
 
@@ -887,7 +888,11 @@ void tx_file_browser(bool reply) {
       touch_button = 0;
     }
 
-    if (touch_row == 1 || touch_row == 2 || touch_row == 6 || touch_row == 7) {
+    if (!reply && touch_row == 2) {
+      text_entry(rxcallsign_text, 10, "Enter text");
+      rsv_entry(rsv_text);
+      edit = true;
+    } else if (touch_row == 1 || touch_row == 2 || touch_row == 6 || touch_row == 7) {
       t_keyboard.make_color_kb();
       delay(500);
       char color;
@@ -920,8 +925,10 @@ void tx_file_browser(bool reply) {
         draw_overlay(settings.tx_callsign, rxcallsign_text, rsv_text);
       } else {
         overlay.clear(0);
-        draw_overlay(settings.tx_callsign, "CQ CQ", "");
+        if (edit) draw_overlay(settings.tx_callsign, rxcallsign_text, rsv_text);
+        else draw_overlay(settings.tx_callsign, "CQ CQ", "");
       }
+
 
       if (settings.overlay) set_overlay(settings.overlay_text);
       display_image(filename.c_str(), true);

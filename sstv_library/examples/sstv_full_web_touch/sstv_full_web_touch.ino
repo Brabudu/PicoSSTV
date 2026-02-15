@@ -635,8 +635,8 @@ void loop() {
 
         overlay.clear(0);
         if (first_img_received) {
-          overlay.draw_image(20, 130, 106, 80, scaled_image);
-          overlay.draw_rect(19, 129, 108, 82, COLOUR_WHITE);
+          overlay.draw_image(10, 130, 106, 80, scaled_image);
+          overlay.draw_rect(9, 129, 108, 82, COLOUR_WHITE);
           settings.transmit_mode = convert_mode(sstv_decoder.getLastMode());
         }
         delay(500);
@@ -892,7 +892,8 @@ void tx_file_browser(bool reply) {
       text_entry(rxcallsign_text, 10, "Enter text");
       rsv_entry(rsv_text);
       edit = true;
-    } else if (touch_row == 1 || touch_row == 2 || touch_row == 6 || touch_row == 7) {
+    } 
+    if (touch_row == 1 || touch_row == 2 || touch_row == 6 || touch_row == 7) {
       t_keyboard.make_color_kb();
       delay(500);
       char color;

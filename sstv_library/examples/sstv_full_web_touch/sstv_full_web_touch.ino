@@ -479,7 +479,7 @@ public:
   void launch_slideshow() {
     root = SDFS.openDir("/");
     num_bitmaps = count_bitmaps(root);
-    bitmap_index = 0;
+    bitmap_index = num_bitmaps - 2;
     last_update_time = 0;
   }
 
@@ -735,7 +735,7 @@ void initialise_sdcard() {
   SPI.setRX(SDCARD_MISO);
   SPI.setTX(SDCARD_MOSI);
   SPI.setSCK(SDCARD_SCK);
-  SDFS.setConfig(SDFSConfig(SDCARD_CS, SD_SCK_MHZ(20), SPI));
+  SDFS.setConfig(SDFSConfig(SDCARD_CS, SD_SCK_MHZ(40), SPI));
   sdInitialized = SDFS.begin();
 
   Serial.println("initialization done.");
@@ -888,12 +888,12 @@ void tx_file_browser(bool reply) {
       touch_button = 0;
     }
 
-    if (!reply && touch_row == 2) {
+    if (!reply && (touch_row == 3 || touch_row == 2)) {
       text_entry(rxcallsign_text, 10, "Enter text");
       rsv_entry(rsv_text);
       edit = true;
-    } 
-    if (touch_row == 1 || touch_row == 2 || touch_row == 6 || touch_row == 7) {
+    }
+    if (touch_row == 1 || touch_row == 2 || touch_row == 3 || touch_row == 6 || touch_row == 7) {
       t_keyboard.make_color_kb();
       delay(500);
       char color;
@@ -902,7 +902,7 @@ void tx_file_browser(bool reply) {
         color = t_keyboard.get_key_press();
       } while (color == '-');
       if (touch_row == 1) settings.color1 = color;
-      else if (touch_row == 2) settings.color2 = color;
+      else if (touch_row == 2 || touch_row == 3) settings.color2 = color;
       else settings.color3 = color;
       save();
       redraw = true;

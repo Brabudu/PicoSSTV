@@ -2,7 +2,9 @@
 // MIT License
 
 #include "lcd_menu.h"
+#ifdef WIFI
 #include "wifi_server.h"
+#endif
 
 static const uint16_t timeouts[] = { UINT16_MAX, 1, 2, 5, 10, 30, 60, 60 * 2, 60 * 5 };
 static const float completion[] = { 0.9, 0.75, 0.5 };
@@ -54,12 +56,12 @@ bool ov_top_bar(menu_item m) {
 extern void text_entry(char string[], uint8_t n, const char* title);
 
 bool tx_callsign(menu_item m) {
-  text_entry(settings.tx_callsign, 10,"Enter your callsign");
+  text_entry(settings.tx_callsign, 10, "Enter your callsign");
   return true;
 }
 
 /////////////////////
-
+#ifdef WIFI
 extern wifi_server wifi_s;
 
 bool wifi(menu_item m) {
@@ -71,6 +73,11 @@ bool wifi(menu_item m) {
   }
   return false;
 }
+#else
+bool wifi(menu_item m) {
+  return false;
+}
+#endif
 
 bool ls_timeout(menu_item m) {
   settings.lost_signal_timeout = m.id;
@@ -161,8 +168,8 @@ menu_item settings_items[] = {
   MENU_ITEM(4, "Lost sig. timeout", false, NULL, &ls_timeout_menu),
   MENU_ITEM(5, "Slideshow timeout", false, NULL, &sl_timeout_menu),
   MENU_ITEM(6, "Tx preamble", true, &tx_preamble, NULL),
-  MENU_ITEM(7, "Top bar overlay", true, &ov_top_bar,NULL),
-  MENU_ITEM(8, "Set callsign", false, &tx_callsign,NULL)
+  MENU_ITEM(7, "Top bar overlay", true, &ov_top_bar, NULL),
+  MENU_ITEM(8, "Set callsign", false, &tx_callsign, NULL)
 
 };
 

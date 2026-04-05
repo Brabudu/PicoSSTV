@@ -548,6 +548,7 @@ void setup() {
   Serial.println("docs: 101-things.readthedocs.io");
   pinMode(LED_BUILTIN, OUTPUT);
   configure_display();
+   display->drawString(10,180, font_8x5,"Initializing SD ...", COLOUR_WHITE, COLOUR_BLACK);
   initialise_sdcard();
   VFS.root(SDFS);
 
@@ -558,6 +559,7 @@ void setup() {
   sync_menu();
 
 #ifdef WIFI
+  display->drawString(0,190, font_8x5,"Initializing WIFI ...", COLOUR_WHITE, COLOUR_BLACK);
   WiFi.mode(WIFI_STA);
   if (settings.wifi) wifi_s.connectToWiFi();
 #endif
@@ -735,7 +737,7 @@ void initialise_sdcard() {
   SPI.setRX(SDCARD_MISO);
   SPI.setTX(SDCARD_MOSI);
   SPI.setSCK(SDCARD_SCK);
-  SDFS.setConfig(SDFSConfig(SDCARD_CS, SD_SCK_MHZ(40), SPI));
+  SDFS.setConfig(SDFSConfig(SDCARD_CS, SD_SCK_MHZ(20), SPI));
   sdInitialized = SDFS.begin();
 
   Serial.println("initialization done.");

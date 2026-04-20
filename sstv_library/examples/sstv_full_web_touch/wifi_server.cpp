@@ -158,7 +158,7 @@ void wifi_server::getImage(WiFiClient& client) {
         boundary.trim();
       }
     }
-    if (line == "\r") break;
+    if (line == "\r" || line.length() <= 1) break;
   }
 
   if (boundary == "") {
@@ -178,7 +178,7 @@ void wifi_server::getImage(WiFiClient& client) {
       }
     }
 
-    if (line == "\r") break;
+    if (line == "\r" || line.length() <= 1) break;
   }
 
   if (filename == "") {
@@ -194,11 +194,11 @@ void wifi_server::getImage(WiFiClient& client) {
   }
 
   // 3️⃣ Scrittura binaria fino al boundary finale
-  uint8_t buffer[512];
+  /*uint8_t buffer[512];
   String tail = "\r\n" + boundary;
   int tailLen = tail.length();
 
-  while (client.connected()) {
+  /*while (client.connected()) {
     int len = client.read(buffer, sizeof(buffer));
     if (len <= 0) break;
 
@@ -211,7 +211,54 @@ void wifi_server::getImage(WiFiClient& client) {
     } else {
       fwrite(buffer, 1, len, file);
     }
+  }*/
+ uint8_t buffer[512];
+uint8_t prev[128];  // per gestire boundary spezzato
+int prevLen = 0;
+
+String tail = "\r\n" + boundary;
+int tailLen = tail.length();
+
+while (client.connected()) {
+  int len = client.read(buffer, sizeof(buffer));
+  if (len <= 0) break;
+
+  // Combina prev + buffer
+  uint8_t temp[640];
+  memcpy(temp, prev, prevLen);
+  memcpy(temp + prevLen, buffer, len);
+
+  int totalLen = prevLen + len;
+
+  // Cerca boundary nei dati binari
+  int pos = -1;
+  for (int i = 0; i <= totalLen - tailLen; i++) {
+    if (memcmp(temp + i, tail.c_str(), tailLen) == 0) {
+      pos = i;
+      break;
+    }
   }
+
+  if (pos >= 0) {
+    fwrite(temp, 1, pos, file);
+    break;
+  }
+
+  // Scrivi tutto tranne gli ultimi byte (potrebbero contenere metà boundary)
+  int safeLen = totalLen - tailLen;
+  if (safeLen > 0) {
+    fwrite(temp, 1, safeLen, file);
+
+    // salva ultimi byte
+    prevLen = tailLen;
+    memcpy(prev, temp + safeLen, prevLen);
+  } else {
+    // troppo corto, accumula
+    memcpy(prev + prevLen, buffer, len);
+    prevLen += len;
+  }
+}
+
 
   fclose(file);
 }

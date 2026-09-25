@@ -548,7 +548,7 @@ void setup() {
   Serial.println("docs: 101-things.readthedocs.io");
   pinMode(LED_BUILTIN, OUTPUT);
   configure_display();
-   display->drawString(10,180, font_8x5,"Initializing SD ...", COLOUR_WHITE, COLOUR_BLACK);
+   display->drawString(10,200, font_8x5,"Initializing SD ...", COLOUR_WHITE, COLOUR_BLACK);
   initialise_sdcard();
   VFS.root(SDFS);
 
@@ -559,7 +559,7 @@ void setup() {
   sync_menu();
 
 #ifdef WIFI
-  display->drawString(0,190, font_8x5,"Initializing WIFI ...", COLOUR_WHITE, COLOUR_BLACK);
+  display->drawString(10,214, font_8x5,"Initializing WIFI ...", COLOUR_WHITE, COLOUR_BLACK);
   WiFi.mode(WIFI_STA);
   if (settings.wifi) wifi_s.connectToWiFi();
 #endif
@@ -582,7 +582,7 @@ void loop() {
   bool image_complete = false;
   view_mode = rx_mode;
   draw_blank_screen();
-  strncpy(settings.overlay_text, "Pi Pico SSTV", 24);
+  strncpy(settings.overlay_text, "Pi Pico SSTV++", 24);
   load();
 
 
@@ -703,10 +703,10 @@ void draw_splash_screen() {
 
 void draw_blank_screen() {
 
-  display->clear(COLOUR_NAVY);
-  display->drawString((DISPLAY_WIDTH - (12 * strlen("Pico SSTV"))) / 2, 100, font_16x12, "Pico SSTV", COLOUR_GREY, COLOUR_NAVY);
+  display->clear(COLOUR_BLACK);
+  display->drawString((DISPLAY_WIDTH - (12 * strlen("Pico SSTV"))) / 2, 100, font_16x12, "Pico SSTV", COLOUR_GREY, COLOUR_BLACK);
 #ifdef WIFI
-  display->drawString((DISPLAY_WIDTH - (12 * strlen(WiFi.localIP().toString().c_str()))) / 2, 130, font_16x12, WiFi.localIP().toString().c_str(), COLOUR_GREY, COLOUR_NAVY);
+  display->drawString((DISPLAY_WIDTH - (12 * strlen(WiFi.localIP().toString().c_str()))) / 2, 130, font_16x12, WiFi.localIP().toString().c_str(), COLOUR_GREY, COLOUR_BLACK);
 #endif
 }
 

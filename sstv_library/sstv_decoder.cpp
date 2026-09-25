@@ -621,10 +621,9 @@ void c_sstv_decoder :: get_iq_sample(int16_t &i, int16_t &q)
 }
 
 //return the frequency of a single sample
-uint16_t c_sstv_decoder :: get_frequency_sample()
+void c_sstv_decoder :: get_frequency_sample(uint16_t &magnitude, uint16_t &smoothed_frequency)
 {
 
-  uint16_t magnitude;
   int16_t phase;
   int16_t sample_i;
   int16_t sample_q;
@@ -634,21 +633,20 @@ uint16_t c_sstv_decoder :: get_frequency_sample()
   cordic_rectangular_to_polar(sample_i, sample_q, magnitude, phase);
 
   //convert phase to frequency in Hz
-  frequency = last_phase-phase;
+  m_frequency = last_phase-phase;
   last_phase = phase;
-  int16_t sample = (int32_t)frequency*15000>>16;
+  int16_t sample = (int32_t)m_frequency*15000>>16;
 
   //apply a smoothing filter
   static uint32_t smoothed_sample = 0;
   smoothed_sample = ((smoothed_sample << 3) + sample - smoothed_sample) >> 3;
-  int16_t smoothed_sample_16 = std::min(std::max(smoothed_sample, (uint32_t)1000u), (uint32_t)2500u);
+  smoothed_frequency = std::min(std::max(smoothed_sample, (uint32_t)600u), (uint32_t)2500u);
   
-  scope(magnitude, smoothed_sample_16);
-  
-  return smoothed_sample_16;
+  scope(magnitude, smoothed_frequency);
+
 }
 
-void c_sstv_decoder :: decode_sample(uint16_t sample, uint16_t &pixel_y, uint16_t &pixel_x, uint8_t &pixel_colour, uint8_t &pixel, bool &pixel_complete, bool &line_complete, bool &image_complete)
+void c_sstv_decoder :: decode_sample(uint16_t magnitude, uint16_t frequency, uint16_t &pixel_y, uint16_t &pixel_x, uint8_t &pixel_colour, uint8_t &pixel, bool &pixel_complete, bool &line_complete, bool &image_complete)
 {
 
   //Serial.println(sample);
@@ -657,33 +655,39 @@ void c_sstv_decoder :: decode_sample(uint16_t sample, uint16_t &pixel_y, uint16_
   line_complete = false;
   image_complete = false;
 
-  //detect scan syncs
+   static float noise=magnitude;
+  if(frequency > 600  && frequency < 1000) {
+    noise = noise*0.999 + magnitude*0.001;
+  }
+
+  // detect scan syncs
   bool sync_found = false;
   uint32_t line_length = 0u;
   if(sync_state == detect)
   {
-    if( sample < 1400 && last_sample >= 1400)
-    {
-      sync_state = confirm;
-      sync_counter = 0;
+    if( frequency < 1400 && frequency >= 1000 && last_frequency >= 1400) {
+      if(magnitude > 1.1f*noise) {
+        sync_state = confirm;
+        sync_counter = 0;
+      }
     }
-  }
-  else if(sync_state == confirm)
-  {
-    if( sample < 1400)
-    {
+  } else if (sync_state == confirm) {
+    if( frequency < 1400 && frequency >= 1000 && magnitude > noise) {
       sync_counter++;
-    }
-    else if(sync_counter > 0)
-    {
+    } else if (sync_counter > 0) {
       sync_counter--;
     }
 
-    if(sync_counter == 40)
-    {
+
+    if(sync_counter == 20) {
+      static uint32_t debug_count = 0;
       sync_found = true;
-      line_length = sample_number-last_hsync_sample;
+      line_length = sample_number - last_hsync_sample;
       last_hsync_sample = sample_number;
+      sync_state = detect;
+    }
+
+    if(sync_counter == 0) {
       sync_state = detect;
     }
   }
@@ -805,7 +809,7 @@ void c_sstv_decoder :: decode_sample(uint16_t sample, uint16_t &pixel_y, uint16_
       }
 
       //colour pixels
-      pixel_accumulator += frequency_to_brightness(sample);
+      pixel_accumulator += frequency_to_brightness(frequency);
       pixel_n++;
       image_sample+=m_scale;
 
@@ -815,7 +819,7 @@ void c_sstv_decoder :: decode_sample(uint16_t sample, uint16_t &pixel_y, uint16_
   }
 
   sample_number++;
-  last_sample = sample;
+  last_frequency = frequency;
 
 }
 
@@ -847,8 +851,10 @@ bool c_sstv_decoder :: decode_image_non_blocking(uint8_t timeout_s, bool slant_c
   uint8_t pixel;
   bool pixel_complete, line_complete, image_complete;
 
-  int16_t sample = get_frequency_sample();
-  decode_sample(sample, pixel_y, pixel_x, pixel_colour, pixel, pixel_complete, line_complete, image_complete);
+  uint16_t magnitude;
+  uint16_t frequency;
+  get_frequency_sample(magnitude,frequency);
+  decode_sample(magnitude,frequency, pixel_y, pixel_x, pixel_colour, pixel, pixel_complete, line_complete, image_complete);
 
   if(pixel_complete)
   {

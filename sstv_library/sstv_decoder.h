@@ -119,6 +119,7 @@ class c_sstv_decoder
   uint32_t image_sample = 0;
   uint16_t last_sample = 0;
   uint32_t last_hsync_sample = 0;
+  uint16_t last_frequency = 0;
   uint32_t sample_number = 0;
   uint32_t confirmed_sync_sample = 0;
   e_state state = detect_sync;
@@ -133,7 +134,7 @@ class c_sstv_decoder
   int16_t last_phase = 0;
   uint8_t ssb_phase = 0;
   half_band_filter2 ssb_filter;
-  int16_t frequency;
+  int16_t m_frequency;
   e_mode decode_mode;
   s_sstv_mode modes[num_modes];
   bool m_auto_slant_correction;
@@ -142,7 +143,7 @@ class c_sstv_decoder
   bool m_image_complete_flag = false;
   uint8_t m_line[640][5]; //array to contain seperate colour components of each decoded line
 
-  void decode_sample(uint16_t sample, uint16_t &pixel_y, uint16_t &pixel_x, uint8_t &pixel_colour, uint8_t &pixel, bool &pixel_complete, bool &line_complete, bool &image_complete);
+  void decode_sample(uint16_t magnitude, uint16_t frequency, uint16_t &pixel_y, uint16_t &pixel_x, uint8_t &pixel_colour, uint8_t &pixel, bool &pixel_complete, bool &line_complete, bool &image_complete);
 
 
   //override one of these hardware dependent functions.
@@ -153,7 +154,7 @@ class c_sstv_decoder
 
   virtual int16_t get_audio_sample() = 0;
   virtual void get_iq_sample(int16_t &i, int16_t &q);
-  virtual uint16_t get_frequency_sample();
+  virtual void get_frequency_sample(uint16_t &magnitude, uint16_t &frequency);
 
   //Override this function to output a line of image
   virtual void image_write_line(uint16_t line_rgb565[], uint16_t y, uint16_t width, uint16_t height, e_mode decode_mode) = 0;
